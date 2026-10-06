@@ -1,6 +1,12 @@
 param location string
 param appServiceName string
-param tags object
+param tags object = {
+  app: 'appbass'
+  environment: 'production'
+  managedBy: 'bicep'
+  owner: 'hunters-killer'
+  costCenter: 'appbass'
+}
 param budgetAmount int = 20
 param alertEmails array = [
   'hunters_killer@hotmail.com'
