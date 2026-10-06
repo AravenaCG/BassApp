@@ -36,11 +36,11 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       - uses: azure/arm-deploy@v2
         with:
-          scope: subscription
+          scope: resourcegroup
           subscriptionId: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          region: ${{ env.AZURE_LOCATION }}
-          template: ./infra/main.bicep
-          parameters: resourceGroupName=${{ env.AZURE_RESOURCE_GROUP }} appServiceName=${{ env.AZURE_WEBAPP_NAME }}
+          resourceGroupName: ${{ env.AZURE_RESOURCE_GROUP }}
+          template: ./infra/appservice.bicep
+          parameters: location=${{ env.AZURE_LOCATION }} appServiceName=${{ env.AZURE_WEBAPP_NAME }}
       - name: Publish package
         run: |
           mkdir -p deploy
