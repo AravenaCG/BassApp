@@ -31,7 +31,7 @@ jobs:
         with:
           images: ${{ env.IMAGE_NAME }}
           tags: |
-            type=sha
+            type=raw,value=sha-${{ github.sha }}
             type=raw,value=latest
       - uses: docker/build-push-action@v6
         with:
@@ -50,4 +50,4 @@ jobs:
           subscriptionId: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           resourceGroupName: ${{ env.AZURE_RESOURCE_GROUP }}
           template: ./infra/containerapp.bicep
-          parameters: location=${{ env.AZURE_LOCATION }} appName=${{ env.AZURE_APP_NAME }} imageName=${{ env.IMAGE_NAME }}:latest
+          parameters: location=${{ env.AZURE_LOCATION }} appName=${{ env.AZURE_APP_NAME }} imageName=${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
