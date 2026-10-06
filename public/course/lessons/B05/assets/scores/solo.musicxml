@@ -1,0 +1,268 @@
+<?xml version='1.0' encoding='utf-8'?>
+<score-partwise version="4.0">
+  <work>
+    <work-title>3. Motivo original: una realización posible</work-title>
+  </work>
+  <identification>
+    <creator type="composer">Curso: material original</creator>
+  </identification>
+  <part-list>
+    <score-part id="P1">
+      <part-name>Bajo / contrabajo</part-name>
+    </score-part>
+  </part-list>
+  <part id="P1">
+    <measure number="1">
+      <attributes>
+        <divisions>2</divisions>
+        <key>
+          <fifths>0</fifths>
+        </key>
+        <time>
+          <beats>4</beats>
+          <beat-type>4</beat-type>
+        </time>
+        <clef>
+          <sign>F</sign>
+          <line>4</line>
+        </clef>
+        <transpose>
+          <diatonic>0</diatonic>
+          <chromatic>0</chromatic>
+          <octave-change>-1</octave-change>
+        </transpose>
+      </attributes>
+      <direction>
+        <direction-type>
+          <words>Negra = 64</words>
+        </direction-type>
+        <sound tempo="64" />
+      </direction>
+      <harmony>
+        <root>
+          <root-step>C</root-step>
+        </root>
+        <kind text="" use-symbols="no">major</kind>
+      </harmony>
+      <note id="solo-b1-n1">
+        <pitch>
+          <step>C</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>quarter</type>
+        <stem>up</stem>
+        <lyric>
+          <syllabic>single</syllabic>
+          <text>Do</text>
+        </lyric>
+      </note>
+      <note id="solo-b1-n2">
+        <pitch>
+          <step>E</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>quarter</type>
+        <stem>up</stem>
+        <lyric>
+          <syllabic>single</syllabic>
+          <text>Mi</text>
+        </lyric>
+      </note>
+      <note id="solo-b1-n3">
+        <pitch>
+          <step>G</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>quarter</type>
+        <stem>up</stem>
+        <lyric>
+          <syllabic>single</syllabic>
+          <text>Sol</text>
+        </lyric>
+      </note>
+      <note id="solo-b1-n4">
+        <rest />
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>quarter</type>
+      </note>
+    </measure>
+    <measure number="2">
+      <harmony>
+        <root>
+          <root-step>F</root-step>
+        </root>
+        <kind text="" use-symbols="no">major</kind>
+      </harmony>
+      <note id="solo-b2-n1">
+        <pitch>
+          <step>F</step>
+          <octave>2</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>quarter</type>
+        <stem>up</stem>
+        <lyric>
+          <syllabic>single</syllabic>
+          <text>Fa</text>
+        </lyric>
+      </note>
+      <note id="solo-b2-n2">
+        <pitch>
+          <step>A</step>
+          <octave>2</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>quarter</type>
+        <stem>up</stem>
+        <lyric>
+          <syllabic>single</syllabic>
+          <text>La</text>
+        </lyric>
+      </note>
+      <note id="solo-b2-n3">
+        <pitch>
+          <step>C</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>quarter</type>
+        <stem>up</stem>
+        <lyric>
+          <syllabic>single</syllabic>
+          <text>Do</text>
+        </lyric>
+      </note>
+      <note id="solo-b2-n4">
+        <rest />
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>quarter</type>
+      </note>
+    </measure>
+    <measure number="3">
+      <harmony>
+        <root>
+          <root-step>G</root-step>
+        </root>
+        <kind text="" use-symbols="no">major</kind>
+      </harmony>
+      <note id="solo-b3-n1">
+        <pitch>
+          <step>G</step>
+          <octave>2</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>quarter</type>
+        <stem>up</stem>
+        <lyric>
+          <syllabic>single</syllabic>
+          <text>Sol</text>
+        </lyric>
+      </note>
+      <note id="solo-b3-n2">
+        <pitch>
+          <step>B</step>
+          <octave>2</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>quarter</type>
+        <stem>up</stem>
+        <lyric>
+          <syllabic>single</syllabic>
+          <text>Si</text>
+        </lyric>
+      </note>
+      <note id="solo-b3-n3">
+        <pitch>
+          <step>D</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>quarter</type>
+        <stem>up</stem>
+        <lyric>
+          <syllabic>single</syllabic>
+          <text>Re</text>
+        </lyric>
+      </note>
+      <note id="solo-b3-n4">
+        <rest />
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>quarter</type>
+      </note>
+    </measure>
+    <measure number="4">
+      <harmony>
+        <root>
+          <root-step>C</root-step>
+        </root>
+        <kind text="" use-symbols="no">major</kind>
+      </harmony>
+      <note id="solo-b4-n1">
+        <pitch>
+          <step>C</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>quarter</type>
+        <stem>up</stem>
+        <lyric>
+          <syllabic>single</syllabic>
+          <text>Do</text>
+        </lyric>
+      </note>
+      <note id="solo-b4-n2">
+        <pitch>
+          <step>E</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>quarter</type>
+        <stem>up</stem>
+        <lyric>
+          <syllabic>single</syllabic>
+          <text>Mi</text>
+        </lyric>
+      </note>
+      <note id="solo-b4-n3">
+        <pitch>
+          <step>G</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>quarter</type>
+        <stem>up</stem>
+        <lyric>
+          <syllabic>single</syllabic>
+          <text>Sol</text>
+        </lyric>
+      </note>
+      <note id="solo-b4-n4">
+        <rest />
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>quarter</type>
+      </note>
+      <barline location="right">
+        <bar-style>light-heavy</bar-style>
+      </barline>
+    </measure>
+  </part>
+</score-partwise>
