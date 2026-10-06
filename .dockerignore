@@ -1,0 +1,10 @@
+.git
+.github
+node_modules
+.output
+.nitro
+.wrangler
+.sites-runtime
+.azure
+Microsoft
+*.tsbuildinfo
