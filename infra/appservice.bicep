@@ -6,6 +6,7 @@ param alertEmails array = [
   'hunters_killer@hotmail.com'
   'cristian.g.aravena@gmail.com'
 ]
+param budgetStartDate string = utcNow('yyyy-MM-01T00:00:00Z')
 
 resource plan 'Microsoft.Web/serverfarms@2022-09-01' = {
   name: '${appServiceName}-plan'
@@ -56,7 +57,7 @@ resource monthlyBudget 'Microsoft.Consumption/budgets@2023-05-01' = {
     amount: budgetAmount
     timeGrain: 'Monthly'
     timePeriod: {
-      startDate: utcNow('yyyy-MM-01T00:00:00Z')
+      startDate: budgetStartDate
     }
     notifications: {
       forecasted80: {
