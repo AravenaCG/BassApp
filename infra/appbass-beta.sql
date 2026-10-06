@@ -7,6 +7,9 @@ CREATE TABLE dbo.beta_users (
   is_active BIT NOT NULL CONSTRAINT DF_beta_users_active DEFAULT 1,
   created_at DATETIME2(3) NOT NULL CONSTRAINT DF_beta_users_created DEFAULT SYSUTCDATETIME()
 );
+ALTER TABLE dbo.beta_users ADD weekly_study_minutes INT NULL, reminder_day TINYINT NULL, last_reminder_at DATETIME2(3) NULL;
+ALTER TABLE dbo.beta_users ADD CONSTRAINT CK_beta_users_weekly_minutes CHECK (weekly_study_minutes IS NULL OR weekly_study_minutes BETWEEN 15 AND 1200);
+ALTER TABLE dbo.beta_users ADD CONSTRAINT CK_beta_users_reminder_day CHECK (reminder_day IS NULL OR reminder_day BETWEEN 1 AND 7);
 CREATE TABLE dbo.beta_invite_codes (
   id UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_beta_invites PRIMARY KEY DEFAULT NEWSEQUENTIALID(),
   code_hash VARBINARY(32) NOT NULL CONSTRAINT UQ_beta_invites_hash UNIQUE,
