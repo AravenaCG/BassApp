@@ -1,4 +1,4 @@
-name: Deploy Appbass to Azure
+name: Deploy Appbass to Azure Container Apps
 
 on:
   push:
@@ -8,27 +8,37 @@ on:
 permissions:
   id-token: write
   contents: read
+  packages: write
 
 env:
   AZURE_RESOURCE_GROUP: rg-appbass-prod
   AZURE_LOCATION: brazilsouth
-  AZURE_WEBAPP_NAME: appbass
-  NODE_VERSION: '22.x'
+  AZURE_APP_NAME: appbass
+  IMAGE_NAME: ghcr.io/aravenacg/bassapp
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: docker/login-action@v3
         with:
-          version: 11.25.0
-      - uses: actions/setup-node@v4
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/metadata-action@v5
+        id: meta
         with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm build:azure
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha
+            type=raw,value=latest
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
       - uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -39,13 +49,5 @@ jobs:
           scope: resourcegroup
           subscriptionId: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           resourceGroupName: ${{ env.AZURE_RESOURCE_GROUP }}
-          template: ./infra/appservice.bicep
-          parameters: location=${{ env.AZURE_LOCATION }} appServiceName=${{ env.AZURE_WEBAPP_NAME }}
-      - name: Publish package
-        run: |
-          mkdir -p deploy
-          cp -r .output public package.json pnpm-lock.yaml deploy/
-      - uses: azure/webapps-deploy@v3
-        with:
-          app-name: ${{ env.AZURE_WEBAPP_NAME }}
-          package: deploy
+          template: ./infra/containerapp.bicep
+          parameters: location=${{ env.AZURE_LOCATION }} appName=${{ env.AZURE_APP_NAME }} imageName=${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
