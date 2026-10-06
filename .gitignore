@@ -36,8 +36,13 @@ yarn-error.log*
 
 # typescript
 next-env.d.ts
+*.tsbuildinfo
 /dist/
+/.output/
+/.nitro/
 /.wrangler/
+# local PowerShell cache
+/Microsoft/
 # Checkout-local execution profile and tool state; never publish them.
 /.sites-runtime/
 /.agents/
