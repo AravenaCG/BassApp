@@ -70,5 +70,13 @@
       "sharp": "0.35.4"
     }
   },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sharp",
+      "unrs-resolver",
+      "workerd"
+    ]
+  },
   "packageManager": "pnpm@11.25.0"
 }
