@@ -1,12 +1,12 @@
 # Azure Deployment Plan
 
-> **Status:** Executing
+> **Status:** Awaiting approval for beta authentication/data integration
 
 Generated: 2026-10-06
 
 ## 1. Project Overview
 
-**Goal:** Preparar el despliegue de Appbass en Azure Container Apps y automatizarlo mediante commits a GitHub.
+**Goal:** Preparar el despliegue de Appbass en Azure Container Apps y automatizarlo mediante commits a GitHub; integrar una beta aislada de autenticación, progreso, puntos y referidos en `AppbassBeta` sin modificar `UsuariosOESAT`.
 
 **Path:** Modernize Existing
 
@@ -99,3 +99,19 @@ La aplicación se desplegará como aplicación Node.js empaquetada, con `npm sta
 2. Generar Bicep y workflow de GitHub Actions.
 3. Validar infraestructura y configuración.
 4. Crear los recursos y configurar el secreto de despliegue en GitHub.
+
+## 10. Beta integration plan (requires approval)
+
+The next phase will use only `AppbassBeta` and will not modify `UsuariosOESAT`.
+
+1. Create isolated tables for users, invite codes, sessions, lesson progress, points and referrals.
+2. Implement email/password registration with Argon2id or bcrypt password hashes.
+3. Implement administrator-issued invite codes with expiration, usage limits and audit fields.
+4. Add secure HttpOnly/Secure/SameSite sessions and authorization checks.
+5. Migrate the progress API from D1/Sites identity to SQL Server, preserving idempotency per user.
+6. Add referral and points endpoints with validation against self-referrals and duplicate awards.
+7. Store the SQL connection string only as an Azure Container Apps secret or Key Vault secret.
+8. Add automated tests and deploy through the existing GitHub Actions workflow.
+9. Create a subscription-level or `oesatgroup` budget because the existing `rg-appbass-prod` budget does not cover this database.
+
+No migration or write operation against `UsuariosOESAT` is included.
