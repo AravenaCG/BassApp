@@ -1,7 +1,22 @@
 # Appbass — deployment plan
 
-Status: Deployed and verified — harmony expansion; azure-validate / azure-deploy, existing CI/CD image-only release.
+Status: Validated — remove visible bibliography section; azure-validate, existing CI/CD image-only release.
 Updated: 2026-10-07.
+
+## Bibliography UI removal — validation proof, 2026-10-07
+
+User approved publication of the removal of "Enfoque pedagógico y bibliografía".
+Only the public UI changes; lesson content and internal source metadata remain intact.
+- [x] `node --check public/harmony-ui.mjs`: exit 0.
+- [x] All 17 unit tests passed; TypeScript check with `--incremental false`: exit 0.
+- [x] `corepack pnpm build:azure`: exit 0 with required local filesystem permissions.
+  Initial sandbox build failed on Nitro dependency tracing (EPERM), resolved by retry.
+- [x] `git diff --check`: clean. Existing Dockerfile repeats tests, typecheck and build in CI.
+- [x] Azure subscription matches approved target; appbass is in Brazil South with identity None.
+- [x] Existing deployment ServicePrincipal Contributor role verified; no RBAC changes.
+- [x] Workflow reviewed: push to main updates only the image, retaining runtime secrets.
+Infrastructure compilation, what-if and provisioning checks are N/A: no infrastructure changes.
+Exclude unrelated generated tsconfig.tsbuildinfo from the commit. Post-push verification pending.
 
 ## Approved target
 
