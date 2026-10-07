@@ -1,6 +1,6 @@
 # Appbass — deployment plan
 
-Status: Deployed and verified through azure-validate / azure-deploy, existing CI/CD recipe.
+Status: Validated by azure-validate — harmony expansion; existing CI/CD image-only release.
 Updated: 2026-10-07.
 
 ## Approved target
@@ -14,6 +14,65 @@ Updated: 2026-10-07.
 - Existing USD20 budget scoped to rg-appbass-prod does not cover SQL in oesatgroup. This release changes neither budget nor billing configuration.
 
 ## Release scope
+
+### Harmony learning expansion — 2026-10-07
+
+Mode MODIFY. Keep Node/static ES modules, current Container App and SQL unchanged.
+User-supplied local program/guide and two theory PDFs inform an original bass-oriented
+curriculum. Preserve the five axes: intervals/chords, tonal function, cadences,
+voice leading/walking and inversions. Add prerequisite vocabulary, sevenths and
+major/minor ii–V–I bridges. Explicitly distinguish classical four-part conventions
+from jazz bass practice. Do not redistribute source PDFs or their diagrams/audio.
+
+Implementation plan (authorized by user's continuation):
+- [x] Inspect existing 40-lesson course, program, guide and relevant PDF chapters.
+- [x] Exclude /docs from Git and Docker build context; existing files are untracked.
+- [x] Create progressive original theory units with explanations, worked examples,
+  listening demonstrations, bass exercises, contextual cautions and unit-specific quizzes.
+- [x] Integrate a visible learning route within Mi curso and theory into related lessons;
+  retain existing lesson IDs, completion states and SQL schema.
+- [x] Verify source confidentiality, curriculum prerequisites, examples, desktop/mobile
+  navigation, quizzes and audio; run unit tests, typecheck and production build.
+- [ ] azure-validate then azure-deploy: commit/push existing CI/CD, verify public release.
+
+Budget/scale: existing beta, <=20 users; zero additional resources or services.
+Subscription/region: previously user-confirmed target below, unchanged. Resource
+inventory for provisioning: none. Quota/policy provisioning checks N/A; no new
+architecture, roles, identities, network access or migration. Existing 100-point
+lesson progress remains intact; new reading/quiz content does not award extra points.
+Source files remain local only. Public curriculum is authored independently; no
+verbatim chapters, copied exercises, pages, PDFs or embedded source recordings.
+
+### Validation proof — harmony expansion, 2026-10-07
+
+- `node --test tests/study.test.mjs tests/repertoire.test.mjs tests/harmony.test.mjs`:
+  17/17 passed, including content structure, prerequisites, musical examples,
+  cancellable audio, source exclusions and existing repertoire tests.
+- `corepack pnpm exec tsc --noEmit --incremental false`: exit 0.
+- `corepack pnpm build:azure`: exit 0; production Node package built successfully.
+- `APPBASS_TEST_URL=http://127.0.0.1:3102 corepack pnpm exec playwright test`:
+  11/11 passed (14.1s). Checks all 16 units at mobile width, per-unit quizzes,
+  completion gate, account isolation, blocked/malformed storage, audio start/stop,
+  linked lessons/practice, existing account/tour/player flows (mock APIs, no SQL writes).
+- Desktop/mobile screenshots inspected locally: readable text, controls and examples,
+  no horizontal overflow. `app.js?v=5` cache-busting reference reviewed after tests;
+  underlying tested JS unchanged. CI will build the final HTML with that reference.
+- `git diff --check`: clean. `git check-ignore` confirms all four /docs files ignored;
+  `git ls-files docs`: empty. Docker excludes docs and local extraction tooling/outputs.
+- `az account show`: approved subscription d8a9c4b4-89a1-482d-88dd-ac38d3d289a1.
+- `az containerapp show`: appbass / rg-appbass-prod / Brazil South; identity None;
+  existing SQL secret name preserved (values never accessed).
+- `az role assignment list`: existing ServicePrincipal Contributor role, unchanged.
+- Static role/infrastructure review: no new resources, data access, identities or
+  permissions. What-if, Bicep compilation/provisioning quotas are N/A to this release.
+- Dockerfile/lockfile reviewed. GitHub CI runs all 17 unit tests, typecheck and Docker
+  production build before the image update. Local Docker build is delegated to CI.
+- 16 original units, 32 questions and 16 synthesized examples, related to 31 of the
+  existing 40 lessons. Other lessons and all existing PDF assets remain unchanged.
+- New review progress explicitly browser-local by account; existing SQL lesson
+  completion/points untouched. No claims of automated instrumental evaluation.
+
+Publication pending: push approved by user, then await CI and verify live revision/UI.
 
 Current release: guided help/tour, louder practice audio, four original sample-backed
 studies, six traceable beta repertoire entries (two playable Joplin reductions and

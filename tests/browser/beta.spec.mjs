@@ -1,4 +1,58 @@
 import {test,expect} from '@playwright/test';
+import {harmonyUnits} from '../../public/harmony-curriculum.mjs';
+test('harmony route verifies understanding, remembers local progress and isolates logout',async({page})=>{
+ await mocks(page,true);const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/appbass.html#curso');await expect(page.locator('#profile-button')).toBeVisible();
+ await expect(page.locator('#harmony-title')).toHaveText(harmonyUnits[0].title);
+ await expect(page.locator('#harmony-complete')).toBeDisabled();
+ await page.locator('[data-harmony-question="0"] [data-harmony-answer="0"]').click();
+ await expect(page.locator('[data-harmony-question="0"] [role=status]')).toContainText('Revisemos:');
+ await page.locator('[data-harmony-question="0"] [data-harmony-answer="1"]').click();
+ await page.locator('[data-harmony-question="1"] [data-harmony-answer="0"]').click();
+ await expect(page.locator('#harmony-complete')).toBeDisabled();
+ await page.locator('#harmony-played').check();await page.locator('#harmony-complete').click();
+ await expect(page.locator('#harmony-progress')).toContainText('1 de 16');
+ await page.reload();await expect(page.locator('#profile-button')).toBeVisible();await expect(page.locator('#harmony-progress')).toContainText('1 de 16');
+ await page.locator('.harmony-course header [data-harmony-go]').click();
+ await expect(page.locator('#harmony-title')).toHaveText(harmonyUnits[1].title);
+ await page.locator('#harmony-listen').click();await expect(page.locator('#harmony-audio-status')).toContainText('Reproduciendo');
+ await page.locator('#harmony-stop').click();await expect(page.locator('#harmony-audio-status')).toContainText('detenido');
+ await page.locator('#harmony-practice').click();await expect(page).toHaveURL(/#practicar$/);
+ await expect(page.locator('#exercise-title')).toHaveText('Tríadas mayores y menores');
+ await page.locator('#profile-button').click();await page.locator('#logout').click();
+ await page.locator('nav [data-page=curso]').click();await expect(page.locator('#harmony-progress')).toContainText('0 de 16');
+ expect(errors).toEqual([]);
+});
+test('all harmony units are reachable on mobile and linked lesson theory is expanded',async({page})=>{
+ await mocks(page,true);await page.setViewportSize({width:390,height:844});
+ const ready=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/progress');
+ await page.goto('/appbass.html#curso?unidad=H04');await ready;
+ await expect(page.locator('#harmony-title')).toHaveText(harmonyUnits[3].title);
+ for(const unit of harmonyUnits){
+  await page.evaluate(id=>{location.hash='curso?unidad='+id;},unit.id);
+  await expect(page.locator('#harmony-title')).toHaveText(unit.title);
+  await expect(page.locator('[data-harmony-question]')).toHaveCount(2);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+ }
+ await page.evaluate(()=>{location.hash='curso?unidad=H04';});
+ await page.locator('[data-harmony-lesson="B03"]').click();
+ await expect(page.locator('.lesson-harmony')).toContainText('Intervalos: escuchar y medir una relación');
+ await page.locator('[data-harmony-open="H04"]').click();await expect(page.locator('#detail-dialog')).toBeHidden();
+ await expect(page.locator('#harmony-title')).toHaveText(harmonyUnits[3].title);
+});
+test('harmony malformed storage and blocked persistence do not prevent learning',async({page})=>{
+ await mocks(page,true);await page.addInitScript(()=>{
+  localStorage.setItem('appbass-harmony-v1-test-person','{"version":1,"done":["unknown",null,"H01","H01"],"last":"bad"}');
+ });
+ await page.goto('/appbass.html#curso');await expect(page.locator('#profile-button')).toBeVisible();
+ await expect(page.locator('#harmony-progress')).toContainText('1 de 16');
+ await expect(page.locator('#harmony-title')).toHaveText(harmonyUnits[1].title);
+ await page.evaluate(()=>{Storage.prototype.setItem=function(){throw Error('storage unavailable');};});
+ await page.locator('[data-harmony-question="0"] [data-harmony-answer="1"]').click();
+ await page.locator('[data-harmony-question="1"] [data-harmony-answer="2"]').click();
+ await page.locator('#harmony-played').check();await page.locator('#harmony-complete').click();
+ await expect(page.locator('#harmony-progress')).toContainText('no permite guardar');
+});
 const user={id:'test-person',email:'beta@example.test',displayName:'Beta',weeklyStudyMinutes:120,reminderDay:2,instrument:'electricBass',level:'basic',timeZone:'America/Argentina/Buenos_Aires',reminderEnabled:true,lastLesson:'B03'};
 test('repertoire sources, MIDI reduction, CC0 playback and solo controls work on mobile',async({page})=>{
  const errors=[];page.on('pageerror',e=>errors.push(e.message));await mocks(page,true);

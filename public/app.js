@@ -2,6 +2,8 @@ import {mountPractice} from './practice-ui.mjs';
 import {catalog} from './practice-engine.mjs';
 import {mountAccount,api} from './account-ui.mjs?v=4';
 import {mountHelp} from './help-ui.mjs';
+import {mountHarmony,lessonHarmonyHTML} from './harmony-ui.mjs';
+import {unitsForLesson} from './harmony-curriculum.mjs';
 'use strict';
 const $ = (s, root = document) => root.querySelector(s);
 const $$ = (s, root = document) => [...root.querySelectorAll(s)];
@@ -30,8 +32,9 @@ const help=mountHelp();
 const workspace=document.createElement('article');workspace.className='workspace';
 $('#workspace-home').append(workspace);
 const practice=mountPractice(workspace,{onLesson:openLesson,onJournal:entry=>account.openJournal(entry)});
+const harmony=mountHarmony({onLesson:openLesson,onStopOtherAudio:()=>practice.stop(),async onPractice(id){await practice.selectExercise(id);location.hash='practicar';navigate();}});
 const account=mountAccount({
-  async onSession(user){currentUser=user;progress=null;instrument=user?.instrument||'electricBass';lessonLevel=user?.level||'basic';await practice.setUser(user);},
+  async onSession(user){currentUser=user;progress=null;instrument=user?.instrument||'electricBass';lessonLevel=user?.level||'basic';await practice.setUser(user);harmony.setUser(user);},
   onProgress:loadProgress,
   onReady:user=>help.setUser(user),
   onPractice(){location.hash='practicar';navigate();},
@@ -57,6 +60,7 @@ const readingText=object=>{
 };
 async function openLesson(id){
  if(!/^[BIA]\d{2}$/.test(id))return;
+ harmony.stop();practice.stop();
  currentLessonId=id;const run=++dialogRun,dialog=$('#detail-dialog');
  $('#detail-label').textContent='LECCIÓN '+id;$('#detail-content').innerHTML='<p>Cargando lección…</p>';
  if(!dialog.open)dialog.showModal();
@@ -67,7 +71,7 @@ async function openLesson(id){
    <span class="tag">${escapeHTML(levels[data.level])}</span><h2>${escapeHTML(data.title)}</h2>
    <div class="button-row"><a class="secondary" href="${base}${id}.pdf" target="_blank" rel="noopener">Abrir lección PDF</a><button class="primary" id="lesson-to-player">Practicar con acompañamiento</button></div>
    <div class="lesson-status" role="group" aria-label="Estado de la lección">${[['read','Leído'],['practiced','Practicado'],['review','Para repasar']].map(([state,label])=>`<button class="secondary" data-state="${state}" aria-pressed="${progress?.states?.[id]===state}">${label}</button>`).join('')}</div>
-   <details class="lesson-step" open><summary>1. Comprender el concepto</summary><h3>Objetivos</h3><ul>${data.learningObjectives.map(t=>`<li>${escapeHTML(t)}</li>`).join('')}</ul>${data.theory.blocks.map(t=>`<h3>${escapeHTML(t.title)}</h3><p>${escapeHTML(t.text)}</p>`).join('')}${readingText(data.readingExercises)}</details>
+   <details class="lesson-step" open><summary>1. Comprender el concepto</summary><h3>Objetivos</h3><ul>${data.learningObjectives.map(t=>`<li>${escapeHTML(t)}</li>`).join('')}</ul>${lessonHarmonyHTML(id)}${data.theory.blocks.map(t=>`<h3>${escapeHTML(t.title)}</h3><p>${escapeHTML(t.text)}</p>`).join('')}${readingText(data.readingExercises)}</details>
    <details class="lesson-step"><summary>2. Escuchar y leer</summary>${materials.map(m=>`<section class="material"><h3>${escapeHTML(m.title)}</h3><p>${escapeHTML(m.description)}</p>${m.renderAssetIds.map(a=>imageAsset(data,a,base,m.title)).join('')}${audioAsset(data,m.audioAssetId,base)}</section>`).join('')}</details>
    <details class="lesson-step"><summary>3. Tocar y explorar</summary>${data.instrumentAdaptations.filter(a=>a.instrument===instrument).map(a=>readingText(a.instructions)).join('')}
    ${(data.fretboardMaps||[]).filter(m=>m.instrument===instrument).map(m=>imageAsset(data,m.assetId,base,'Mapa del instrumento','map-img')).join('')}
@@ -78,6 +82,7 @@ async function openLesson(id){
    <details><summary>Ver respuestas</summary>${readingText(data.earTraining.trials)}</details>${readingText(data.selfAssessment)}<div id="quick-quiz" class="quiz"></div></details>
    <section class="lesson-completion" id="completion-panel"></section>`;
   renderCompletion(id);renderQuiz(id);
+  $$('[data-harmony-open]',$('#detail-content')).forEach(b=>b.onclick=()=>{dialog.close();harmony.open(b.dataset.harmonyOpen);});
   $('#lesson-to-player').onclick=async()=>{dialog.close();await practice.selectLesson(id);location.hash='practicar';navigate();if(!catalog.some(c=>c.lesson===id))toast('Elegí una práctica del catálogo para aplicar el concepto.');};
   $$('[data-state]',$('#detail-content')).forEach(b=>b.onclick=async()=>{if(!currentUser)return account.openAuth();try{await api('/api/activity',{kind:'lesson',lessonId:id,state:b.dataset.state});await loadProgress();$$('[data-state]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));toast('Estado guardado.');}catch(e){toast(e.message);}});
   $$('.score-img,.map-img',$('#detail-content')).forEach(img=>{img.tabIndex=0;img.setAttribute('role','button');img.setAttribute('aria-label','Ampliar '+img.alt);const zoom=()=>window.open(img.src,'_blank','noopener');img.onclick=zoom;img.onkeydown=e=>{if(e.key==='Enter')zoom();};});
@@ -91,11 +96,13 @@ function renderQuiz(id){
   {q:'¿Cuántos semitonos tiene una quinta justa?',choices:['5','6','7'],answer:2,why:'La quinta justa está a siete semitonos de la fundamental.'},
   {q:'En clave de fa, ¿qué nota se ubica en la cuarta línea contando desde abajo?',choices:['Do','Fa','La'],answer:1,why:'Los dos puntos de la clave de fa rodean la cuarta línea, que corresponde a Fa.'}
  ];
- let index=id==='B01'?0:id==='B03'?1:3;
+ const unit=unitsForLesson(id)[0];
+ if(unit)questions.splice(0,questions.length,...unit.questions.map(q=>({q:q.prompt,choices:q.choices,answer:q.answer,why:q.explanation})));
+ let index=unit?0:id==='B01'?0:id==='B03'?1:3;
  const panel=$('#quick-quiz');
  function show(){
   const q=questions[index%questions.length];
-  panel.innerHTML=`<h3>Repaso interactivo de fundamentos</h3><p>${q.q}</p><div class="button-row">${q.choices.map((c,i)=>`<button class="secondary" data-answer="${i}">${c}</button>`).join('')}</div><p role="status"></p><button class="secondary" id="quiz-next" hidden>Otra pregunta</button>`;
+  panel.innerHTML=`<h3>${unit?'Repaso · '+escapeHTML(unit.title):'Repaso interactivo de fundamentos'}</h3><p>${escapeHTML(q.q)}</p><div class="button-row">${q.choices.map((c,i)=>`<button class="secondary" data-answer="${i}">${escapeHTML(c)}</button>`).join('')}</div><p role="status"></p><button class="secondary" id="quiz-next" hidden>Otra pregunta</button>`;
   $$('[data-answer]',panel).forEach(b=>b.onclick=()=>{const correct=Number(b.dataset.answer)===q.answer;panel.querySelector('[role=status]').textContent=(correct?'Correcto. ':'Revisemos: ')+q.why;panel.querySelector('#quiz-next').hidden=false;});
   panel.querySelector('#quiz-next').onclick=()=>{index++;show();};
  }show();

@@ -138,6 +138,7 @@ export function mountPractice(host,{onLesson,onJournal}) {
   document.addEventListener('visibilitychange',()=>{if(document.hidden){engine.pause();lastFrame=0;$('#practice-play').textContent='Reproducir';}});
   choices();void load('open-strings');
   return {
+    async selectExercise(id){if(!catalog.some(c=>c.id===id))return false;$('#practice-level').value='';choices();await load(id);return true;},
     async setUser(user){
       storageKey='appbass-practice-'+(user?.id||'guest');
       let pref;try{pref=JSON.parse(localStorage.getItem(storageKey)||'null');}catch{}

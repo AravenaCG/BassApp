@@ -1,0 +1,29 @@
+.harmony-course{margin:24px 0 36px;border:1px solid #35465d;border-radius:16px;padding:clamp(16px,3vw,32px);background:#101b2a}
+.harmony-course p,.lesson-harmony p{line-height:1.8;max-width:78ch}
+.harmony-course header h2{font-size:clamp(1.5rem,3vw,2.1rem);margin:10px 0}
+.harmony-course h4{font-size:1.15rem;color:#48e3ed;margin-top:28px}
+.harmony-course h5,.lesson-harmony h4{font-size:1rem;margin-bottom:8px}
+.harmony-course li,.lesson-harmony li{line-height:1.75;margin:8px 0}
+.harmony-roadmap,.harmony-sources{margin:24px 0;padding:16px;border:1px solid #35465d;border-radius:10px}
+.harmony-roadmap summary,.harmony-sources summary{cursor:pointer;font-weight:600}
+.harmony-roadmap ol{padding-left:22px}
+.harmony-unit-link{display:block;width:100%;text-align:left;padding:12px;color:inherit;background:#0b1420;border:1px solid #35465d;border-radius:8px;font:inherit;cursor:pointer}
+.harmony-unit-link small{display:block;color:#abc0d8;margin-top:4px}
+.harmony-unit-link[aria-current=step]{border-color:#48e3ed}
+.harmony-reader{scroll-margin-top:30px;max-width:900px;margin:24px auto}
+.harmony-reader h3{font-size:clamp(1.4rem,3vw,1.85rem)}
+.harmony-example{margin:20px 0;padding:18px;background:#080f1b;border-left:3px solid #48e3ed;border-radius:6px;overflow-wrap:anywhere}
+.harmony-example figcaption{font-weight:600;color:#48e3ed}
+.harmony-example ul{list-style:none;padding:0;font-family:ui-monospace,monospace}
+.harmony-caution{padding:16px;border-left:3px solid #ffc571;background:#1e2532;margin:20px 0}
+.harmony-check fieldset{min-width:0;margin:22px 0;padding:18px;border:1px solid #42536a;border-radius:10px}
+.harmony-check legend{padding:0 6px;line-height:1.6;max-width:100%}
+.harmony-check .check{align-items:flex-start;line-height:1.6}
+.harmony-course .button-row{flex-wrap:wrap;gap:10px}
+.harmony-course button{white-space:normal;max-width:100%;line-height:1.5}
+.harmony-course button[aria-pressed=true]{border-color:#48e3ed;background:#183444}
+.harmony-course button:disabled{opacity:.55;cursor:not-allowed}
+.harmony-inline{background:none;border:0;text-decoration:underline;color:#48e3ed;font:inherit;cursor:pointer;text-align:left;padding:0}
+.harmony-course a{color:#48e3ed;text-decoration:underline}
+.lesson-harmony{border-top:1px solid #42536a;border-bottom:1px solid #42536a;padding:20px 0;margin:24px 0}
+@media(max-width:600px){.harmony-check fieldset{padding:12px}.harmony-course .button-row>*{width:100%}.harmony-course{padding:16px}.harmony-example{padding:12px}}

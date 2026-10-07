@@ -49,3 +49,6 @@ next-env.d.ts
 /.codex/
 /outputs/
 /work/
+
+# Local study sources: do not publish reference documents.
+/docs/

@@ -13,6 +13,9 @@ Interfaz canónica: public/appbass.html. La raíz redirige allí conservando par
 - Recordatorio semanal dentro de la aplicación, con posposición. No se envían correos ni push y no existe aún recuperación de contraseña por correo.
 - Dos grabaciones locales comparables y descargables; no se suben al servidor y se pierden al cerrar la página. No se evalúa automáticamente la interpretación.
 - Cómo usar Appbass: guía por secciones y preguntas frecuentes, accesibles desde el menú y el pie. Tour opcional de cinco pasos en la primera visita autenticada por cuenta/navegador; completar, omitir o cerrar lo marca visto localmente. Se puede repetir desde la ayuda, también sin cuenta. No requiere cambios de SQL ni servicios externos.
+- Mi curso → Armonía desde el bajo: 16 unidades progresivas con 32 preguntas específicas, 16 demostraciones originales sintetizadas, ejemplos analizados y práctica instrumental. Conserva los cinco ejes del programa (intervalos/acordes, funciones, cadencias, conducción y walking, inversiones), con prerrequisitos y un proyecto de integración. Distingue las reglas corales de la práctica del jazz. Las unidades se integran también en las lecciones relacionadas sin modificar sus IDs ni puntos.
+- El repaso de armonía es local por cuenta/navegador, separado del progreso SQL de las 40 lecciones; requiere respuestas correctas y autoevaluación instrumental. Permite explorar, continuar, volver a repasar y acceder directamente mediante `#curso?unidad=H01`. No certifica ejecución. Los PDF antiguos no incluyen la ampliación web.
+- `docs/` contiene fuentes privadas locales y está excluido de Git y del contexto Docker. La app distribuye textos, ejercicios y audio originales en `public/harmony-*`, no los PDF fuente, sus imágenes ni sus grabaciones.
 
 Las preferencias del reproductor se recuerdan por cuenta en ese navegador. Progreso y diario se guardan en SQL. Cada lección declarada completada suma 100 puntos una sola vez, incluso con solicitudes simultáneas. Los puntos no son canjeables. La partitura del reproductor es simplificada; las lecciones incluyen partituras y PDF completos.
 
@@ -30,7 +33,7 @@ Node >=22.13 y pnpm (Corepack).
 
 ```sh
 corepack pnpm install --frozen-lockfile
-node --test tests/study.test.mjs
+node --test tests/study.test.mjs tests/repertoire.test.mjs tests/harmony.test.mjs
 corepack pnpm exec tsc --noEmit --incremental false
 corepack pnpm build:azure
 corepack pnpm start:azure
