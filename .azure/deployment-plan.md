@@ -1,7 +1,7 @@
 # Appbass — deployment plan
 
-Status: Validated by azure-validate. User requested push through existing workflow.
-Updated: 2026-10-06.
+Status: Deployed and verified through azure-validate / azure-deploy, existing CI/CD recipe.
+Updated: 2026-10-07.
 
 ## Approved target
 
@@ -84,4 +84,16 @@ Recipe: existing GitHub Actions CI/CD, Azure CLI image-only update.
     to this image-only update. No ACR or managed-identity SQL flow is used.
 
 Deployment must preserve the existing Container App configuration; no Bicep apply.
-Post-push verification: await workflow success, healthy revision and live browser checks.
+Post-push verification completed 2026-10-07 UTC:
+
+- Commit/image: 227b5810cb013f5da23fe857ea3aa1150c74e24c.
+- GitHub Actions run 37564496323: succeeded (1m41s), including Docker tests/build.
+- Revision appbass--0000011: Healthy; latest revision receives 100% of ingress traffic.
+- Public endpoint browser suite: 8/8 passed (23.1s), including CC0 decode/playback.
+  API mocked for account interactions: these tests did not write production SQL.
+- Separate real anonymous `/api/auth/me`: HTTP 200 (not a SQL write/integration test).
+- Live identity remains None; existing SQL secret name retained. No provisioning,
+  RBAC, database, budget or tier changes. Existing deployment Contributor role verified.
+- Downloaded assets preserve original bytes and documented licensing/provenance.
+- Remaining content work: the four Morton entries are source references, not playable
+  bass transcriptions. Joplin uses explicitly labeled automatic didactic reductions.
