@@ -1,0 +1,78 @@
+{
+  "revision": "c1ea7bcc3c7309650ab0da9d15c9cd1fbc4a4c7e",
+  "licenseURL": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "assets": [
+    {
+      "path": "repertoire/entertainer.mid",
+      "url": "https://www.mutopiaproject.org/ftp/JoplinS/entertainer/entertainer.mid",
+      "license": "Public Domain",
+      "creator": "Scott Joplin / Mutopia Project",
+      "sha256": "33e4e81ee64ffb2edf90d1c6a1ddee7276507296bfb915c2bb775231a467f066",
+      "bytes": 22084
+    },
+    {
+      "path": "repertoire/entertainer.pdf",
+      "url": "https://www.mutopiaproject.org/ftp/JoplinS/entertainer/entertainer-a4.pdf",
+      "license": "Public Domain",
+      "creator": "Scott Joplin / Mutopia Project",
+      "sha256": "c1371e0827ee8ec5df5f1a56483bc826035c2608e2f3e5f35cd43fc12fe292f7",
+      "bytes": 255142
+    },
+    {
+      "path": "repertoire/entertainer.ly",
+      "url": "https://www.mutopiaproject.org/ftp/JoplinS/entertainer/entertainer.ly",
+      "license": "Public Domain",
+      "creator": "Scott Joplin / Mutopia Project",
+      "sha256": "3a07fcf4f47b6000ced3e6579ef74bebb3c15af82d542a3aa42271f797544f7d",
+      "bytes": 11100
+    },
+    {
+      "path": "repertoire/maple.mid",
+      "url": "https://www.mutopiaproject.org/ftp/JoplinS/maple/maple.mid",
+      "license": "Public Domain",
+      "creator": "Scott Joplin / Mutopia Project",
+      "sha256": "3dd712a85fabd267f5a2cee5cb23af4683408c2f29b8814721844498f1ee4f66",
+      "bytes": 21518
+    },
+    {
+      "path": "repertoire/maple.pdf",
+      "url": "https://www.mutopiaproject.org/ftp/JoplinS/maple/maple-a4.pdf",
+      "license": "Public Domain",
+      "creator": "Scott Joplin / Mutopia Project",
+      "sha256": "5fe2fe073a6fa5ba249370b46640b8e96df99b8bb4fbe7e2fc4c19a046176c6f",
+      "bytes": 104242
+    },
+    {
+      "path": "repertoire/maple.ly",
+      "url": "https://www.mutopiaproject.org/ftp/JoplinS/maple/maple.ly",
+      "license": "Public Domain",
+      "creator": "Scott Joplin / Mutopia Project",
+      "sha256": "043e9d9207b771658a9afa51e2aa2537c448ecfd602e78ae50110cf3b12209fd",
+      "bytes": 10361
+    },
+    {
+      "path": "samples/piano-c3.wav",
+      "url": "https://raw.githubusercontent.com/sgossner/VCSL/c1ea7bcc3c7309650ab0da9d15c9cd1fbc4a4c7e/Chordophones/Zithers/Grand Piano, Kawai - Legacy/Sustains/GrandPno_Main_Sus_C3_v1_rr1.wav",
+      "license": "CC0-1.0",
+      "creator": "Versilian Studios LLC",
+      "sha256": "3ab81c9d6d9dfb3d2ff4f58fb9346f03fc58f94129f91cac66508a856ca3858f",
+      "bytes": 1557478
+    },
+    {
+      "path": "samples/hihat.wav",
+      "url": "https://raw.githubusercontent.com/sgossner/VCSL/c1ea7bcc3c7309650ab0da9d15c9cd1fbc4a4c7e/Idiophones/Struck Idiophones/Hi-Hat Cymbal/HiHat_HitC_v1_rr1_Mid.wav",
+      "license": "CC0-1.0",
+      "creator": "Versilian Studios LLC",
+      "sha256": "88447fa285b9592cfb7ff2b333977b032e667215f3db0f84d6ff0f4953e39980",
+      "bytes": 210708
+    },
+    {
+      "path": "samples/VCSL-README.md",
+      "url": "https://raw.githubusercontent.com/sgossner/VCSL/c1ea7bcc3c7309650ab0da9d15c9cd1fbc4a4c7e/README.md",
+      "license": "License evidence",
+      "creator": "Versilian Studios LLC",
+      "sha256": "6f7214a188f106c917d6503748485413c3e47cf56bce69f82beb9d16aa0894a9",
+      "bytes": 4365
+    }
+  ]
+}

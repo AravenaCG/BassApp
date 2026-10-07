@@ -6,12 +6,13 @@ Beta de aprendizaje de bajo y contrabajo de cuatro cuerdas (Mi–La–Re–Sol):
 
 Interfaz canónica: public/appbass.html. La raíz redirige allí conservando parámetros y referidos. public/app.js integra curso, atlas y grabaciones; account-ui.mjs, practice-ui.mjs y practice-engine.mjs implementan cuentas y práctica. Materiales: public/course.
 
-- Once prácticas: técnica, blues, ii–V–I, walking, turnarounds y dos piezas originales sencillas. Las piezas generadas ofrecen fundamentales, quintas, arpegios y walking.
-- Audio sintetizado, notas y cursor comparten el reloj de Web Audio. Tempo, metrónomo, bajo guía, selección de compases, repetición y aumento gradual de velocidad.
+- Diecisiete prácticas reproducibles: once ejercicios/piezas originales, cuatro pistas originales con cifrado y samples CC0, y dos reducciones automáticas de Joplin. Biblioteca separada con seis títulos históricos; los cuatro de Morton son referencias externas sin audio sincronizado. Fuentes, licencias y limitaciones: [repertorio](public/repertoire/README.md).
+- Piano y hi-hat sampleados (VCSL CC0), bajo sintetizado, notas y cursor comparten el reloj de Web Audio. Mezcla completa/sin bajo/sólo bajo, tempo, metrónomo, selección de compases, repetición y aumento gradual. Música +4 dB y compresor de salida. Colores por función armónica, estética neón y leyenda.
 - Perfil, plan semanal, continuación de lecciones, estados leído/practicado/repasar, diario y comentarios.
 - Registro con invitación, máximo 20 cuentas; inicio/cierre de sesión y cambio de contraseña. Referidos atribuidos a altas reales, sin premios.
 - Recordatorio semanal dentro de la aplicación, con posposición. No se envían correos ni push y no existe aún recuperación de contraseña por correo.
 - Dos grabaciones locales comparables y descargables; no se suben al servidor y se pierden al cerrar la página. No se evalúa automáticamente la interpretación.
+- Cómo usar Appbass: guía por secciones y preguntas frecuentes, accesibles desde el menú y el pie. Tour opcional de cinco pasos en la primera visita autenticada por cuenta/navegador; completar, omitir o cerrar lo marca visto localmente. Se puede repetir desde la ayuda, también sin cuenta. No requiere cambios de SQL ni servicios externos.
 
 Las preferencias del reproductor se recuerdan por cuenta en ese navegador. Progreso y diario se guardan en SQL. Cada lección declarada completada suma 100 puntos una sola vez, incluso con solicitudes simultáneas. Los puntos no son canjeables. La partitura del reproductor es simplificada; las lecciones incluyen partituras y PDF completos.
 

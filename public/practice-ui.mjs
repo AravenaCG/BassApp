@@ -1,4 +1,6 @@
 import {catalog,GROUPS,generatedScore,parseScore,PracticeEngine,playablePosition} from './practice-engine.mjs';
+import {activeRepertoire} from './repertoire.mjs';
+import {parseMidi} from './midi-score.mjs';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const labels={basic:'Básico',intermediate:'Intermedio',advanced:'Avanzado'};
 const noteNames=['Do','Do♯','Re','Mi♭','Mi','Fa','Fa♯','Sol','La♭','La','Si♭','Si'];
@@ -17,6 +19,7 @@ export function mountPractice(host,{onLesson,onJournal}) {
       <button id="practice-play" class="primary" disabled>Reproducir</button><button id="practice-stop" class="secondary">Volver al inicio</button>
       <label>Tempo (BPM)<input id="practice-tempo" type="number" min="30" max="200" step="1" value="72"></label>
       <label>Volumen<input id="practice-volume" type="range" min="0" max="100" value="60"></label>
+      <label>Escuchar<select id="practice-mix"><option value="full">Mezcla completa</option><option value="no-bass">Sin bajo · tocá vos</option><option value="bass-only">Sólo bajo</option></select></label>
       <label class="check"><input type="checkbox" id="practice-guide" checked>Bajo guía</label>
       <label class="check"><input type="checkbox" id="practice-click" checked>Metrónomo</label>
       <label class="check"><input type="checkbox" id="practice-visual" checked>Notas que caen</label>
@@ -27,8 +30,16 @@ export function mountPractice(host,{onLesson,onJournal}) {
       <label>Aumento por vuelta<select id="practice-increment"><option value="0">Mantener tempo</option><option value="2">+2 BPM</option><option value="5">+5 BPM</option></select></label>
     </div><p>Espacio: reproducir o pausar. Flechas: cambiar 2 BPM cuando no estás escribiendo.</p></details>
     <details class="practice-settings"><summary>Partitura de la línea de bajo · clave de fa</summary><div id="practice-score" class="score-scroll"></div>
-      <p>El bajo suena una octava por debajo de lo escrito. Sonido sintetizado. El mapa de contrabajo indica semitonos, no digitaciones.</p></details>
-    <div class="workspace-bottom"><button class="secondary" id="practice-lesson">Abrir lección</button><button class="secondary" id="practice-journal">Guardar práctica en mi diario</button><span id="practice-status" role="status"></span></div>`;
+      <p>Vista didáctica simplificada, no edición crítica. El bajo suena una octava por debajo de lo escrito. El mapa de contrabajo indica semitonos, no digitaciones.</p></details>
+    <p id="practice-source"></p>
+    <div class="workspace-bottom"><button class="secondary" id="practice-lesson">Abrir lección</button><button class="secondary" id="practice-journal">Guardar práctica en mi diario</button><span id="practice-status" role="status"></span></div>
+    <p class="practice-legend">Colores por función respecto del acorde: <span>● Fundamental</span> · <span>● Tercera</span> · <span>● Quinta</span> · <span>● Séptima</span> · <span>● Otras / sin armonía indicada</span></p>
+    <details class="practice-settings" id="repertoire-library"><summary>Repertorio beta · partituras y fuentes</summary>
+      <p>Seis obras históricas de jazz y ragtime. Las partituras son para piano, no partes originales de bajo. Los títulos de Morton abren fuentes externas y todavía no tienen audio sincronizado en Appbass.</p>
+      <div class="repertoire-grid">${activeRepertoire().map(r=>`<article data-collection="${r.collection}" data-repertoire-id="${r.id}"><span class="eyebrow">REPERTORIO BETA</span><h3>${esc(r.title)}</h3><p>${esc(r.composer)} · ${esc(r.edition)}</p><p>${esc(r.status)}</p><p>${esc(r.license)}</p><a href="${esc(r.source)}" target="_blank" rel="noopener noreferrer">Fuente y condiciones ↗</a>${r.pdf?` · <a href="${r.pdf}" target="_blank" rel="noopener">Partitura completa PDF</a><p><button class="secondary" data-play-repertoire="${r.id}">Practicar reducción de bajo</button></p>`:''}</article>`).join('')}</div>
+      <p>Elegí las ediciones históricas señaladas, no cualquier arreglo moderno de la misma página. Dominio público no equivale a ausencia de obligaciones en todos los países; en Argentina puede aplicar el dominio público pagante.</p>
+      <p><a href="repertoire/README.md" target="_blank" rel="noopener">Procedencia, licencias y límites</a> · <a href="repertoire/asset-manifest.json" target="_blank" rel="noopener">Manifiesto verificable de archivos</a></p>
+    </details>`;
   const $=s=>host.querySelector(s);
   let item,score,instrument='electricBass',loadRun=0,storageKey='appbass-practice-guest',sessionSeconds=0,lastFrame=0,preferencesReady=false;
   const engine=new PracticeEngine((beat,tempo)=>{
@@ -44,10 +55,12 @@ export function mountPractice(host,{onLesson,onJournal}) {
     const run=++loadRun;engine.stop();lastFrame=0;sessionSeconds=0;
     item=catalog.find(c=>c.id===id)||catalog[0];$('#exercise-select').value=item.id;
     $('#practice-play').disabled=true;$('#practice-play').textContent='Reproducir';$('#practice-status').textContent='Preparando práctica…';
-    $('#difficulty-label').hidden=!['blues','song1','song2'].includes(item.generated);
+    $('#difficulty-label').hidden=!item.generated||['strings','scale'].includes(item.generated);
+    $('#practice-source').textContent='';
     try {
       let next;
       if(item.generated)next=generatedScore(item.generated,$('#practice-difficulty').value);
+      else if(item.midi){const r=await fetch(item.midi);if(!r.ok)throw Error();next=parseMidi(await r.arrayBuffer());}
       else {
         const base=`course/lessons/${item.lesson}/`;
         const r=await fetch(base+item.lesson+'.lesson.json');if(!r.ok)throw Error();
@@ -60,6 +73,7 @@ export function mountPractice(host,{onLesson,onJournal}) {
       if(!next.notes.length)throw Error();
       score=next;engine.load(score);
       $('#exercise-title').textContent=item.title;$('#exercise-goal').textContent=item.goal;
+      $('#practice-source').innerHTML=item.midi?`Repertorio beta · ${esc(item.edition)}. Reducción automática: los graves se adaptan al registro del bajo; el resto del piano forma el acompañamiento. Sin cifrado inferido. Tempo fijo de estudio. <a href="${item.pdf}" target="_blank" rel="noopener">Ver partitura original completa</a>`:item.group==='backing'?'Acompañamiento original de Appbass con samples CC0 de Versilian Studios. No contiene pistas ni datos de iReal Pro.':'';
       $('#practice-description').textContent=`${labels[item.level]} · ${item.minutes} min sugeridos · ${score.bars.length} compases${item.group==='songs'?' · Composición original de Appbass':''}`;
       $('#practice-tempo').value=score.tempo;
       const opts=score.bars.map((b,i)=>`<option value="${i}">${i+1}</option>`).join('');
@@ -80,18 +94,19 @@ export function mountPractice(host,{onLesson,onJournal}) {
     const upcoming=score.notes.filter(n=>n.beat>=beat&&n.beat-beat<4);
     const positions=[...upcoming,...(active?[active]:[])].map(n=>playablePosition(n.midi,instrument)).filter(Boolean);
     const maxFret=Math.max(12,...positions.map(p=>p.fret)),base=Math.max(0,maxFret-12);
-    let svg='<rect x="80" y="165" width="880" height="105" rx="6" fill="#0b1420"/>';
+    const color=n=>{const bar=score.bars.find(b=>n.beat>=b.beat&&n.beat<b.beat+b.length);if(bar?.root==null)return '#bd8cff';const interval=(n.midi-bar.root+120)%12;return interval===0?'#48e3ed':[3,4].includes(interval)?'#ff6cba':[6,7].includes(interval)?'#88ff99':[10,11].includes(interval)?'#ffc571':'#bd8cff';};
+    let svg='<defs><filter id="practice-glow" x="-70%" y="-70%" width="240%" height="240%"><feGaussianBlur stdDeviation="3"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><rect x="80" y="165" width="880" height="105" rx="6" fill="#0b1420"/>';
     for(let f=0;f<=12;f++){const x=90+f*71;svg+=`<line x1="${x}" y1="165" x2="${x}" y2="270" stroke="#42536a" ${instrument==='doubleBass'?'stroke-dasharray="3 4"':''}/><text x="${x}" y="291" fill="#a8bad0" text-anchor="middle" font-size="12">${base+f}</text>`;}
     ['Sol','Re','La','Mi'].forEach((s,i)=>{const y=177+i*28;svg+=`<line x1="70" y1="${y}" x2="960" y2="${y}" stroke="#8394aa"/><text x="30" y="${y+4}" fill="#cfdae8" font-size="14">${s}</text>`;});
     if($('#practice-visual').checked) {
       for(const n of upcoming){const p=playablePosition(n.midi,instrument);if(!p)continue;const x=90+(p.fret-base)*71,y=150-(n.beat-beat)*32;
-        svg+=`<rect x="${x-15}" y="${y-22}" width="30" height="22" rx="5" fill="#48e3ed" opacity="${1-(n.beat-beat)*.12}"/><text x="${x}" y="${y-6}" text-anchor="middle" font-size="10" fill="#081722">${noteNames[n.midi%12]}</text>`;}
-      if(active){const p=playablePosition(active.midi,instrument);if(p)svg+=`<circle cx="${90+(p.fret-base)*71}" cy="${177+p.string*28}" r="13" fill="#ffc571"/>`;}
+        svg+=`<rect x="${x-15}" y="${y-22}" width="30" height="22" rx="3" fill="#081722" stroke="${color(n)}" stroke-width="2" filter="url(#practice-glow)" opacity="${1-(n.beat-beat)*.12}"/><text x="${x}" y="${y-6}" text-anchor="middle" font-size="10" fill="${color(n)}">${noteNames[n.midi%12]}</text>`;}
+      if(active){const p=playablePosition(active.midi,instrument);if(p)svg+=`<circle cx="${90+(p.fret-base)*71}" cy="${177+p.string*28}" r="13" fill="${color(active)}" filter="url(#practice-glow)"/>`;}
     }
     $('#practice-fretboard').innerHTML=svg;
     $('#practice-score').querySelectorAll('[data-beat]').forEach(n=>n.classList.toggle('sounding',beat>=Number(n.dataset.beat)&&beat<Number(n.dataset.beat)+Number(n.dataset.duration)));
   }
-  async function toggle(){if(engine.playing){engine.pause();lastFrame=0;}else{try{await engine.play();}catch{$('#practice-status').textContent='El navegador no pudo iniciar el audio. Intentá nuevamente.';}}$('#practice-play').textContent=engine.playing?'Pausar':'Reproducir';}
+  async function toggle(){if(engine.playing){engine.pause();lastFrame=0;}else{try{$('#practice-play').disabled=true;$('#practice-status').textContent='Preparando audio…';await engine.play();$('#practice-status').textContent=engine.sampleStatus||'';}catch{$('#practice-status').textContent='El navegador no pudo iniciar el audio. Intentá nuevamente.';}finally{$('#practice-play').disabled=false;}}$('#practice-play').textContent=engine.playing?'Pausar':'Reproducir';}
   $('#practice-play').onclick=toggle;
   $('#practice-stop').onclick=()=>{engine.stop();lastFrame=0;draw(engine.start);$('#practice-play').textContent='Reproducir';};
   $('#exercise-select').onchange=e=>load(e.target.value);
@@ -101,6 +116,8 @@ export function mountPractice(host,{onLesson,onJournal}) {
   $('#practice-tempo').onchange=e=>{const v=Number(e.target.value);if(!Number.isFinite(v))return;e.target.value=Math.max(30,Math.min(200,v));engine.configure({tempo:Number(e.target.value)});save();};
   $('#practice-volume').oninput=e=>engine.configure({volume:Number(e.target.value)/100});
   $('#practice-guide').onchange=e=>engine.configure({guide:e.target.checked});
+  $('#practice-mix').onchange=e=>{const solo=e.target.value==='bass-only';$('#practice-guide').checked=true;$('#practice-guide').disabled=solo;engine.configure({mix:e.target.value,guide:true,...(solo?{metronome:false}:{})});if(solo)$('#practice-click').checked=false;};
+  host.querySelectorAll('[data-play-repertoire]').forEach(button=>button.onclick=()=>{$('#practice-level').value='';choices();void load(button.dataset.playRepertoire);$('#exercise-select').focus();});
   $('#practice-click').onchange=e=>engine.configure({metronome:e.target.checked});
   $('#practice-visual').onchange=()=>draw(engine.position());
   $('#practice-loop').onchange=e=>engine.loop=e.target.checked;

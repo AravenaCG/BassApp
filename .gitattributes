@@ -1,0 +1,5 @@
+# Preserve downloaded evidence/assets byte-for-byte for SHA-256 provenance checks.
+public/repertoire/*.ly -text -whitespace
+public/repertoire/*.mid -text
+public/repertoire/*.pdf -text
+public/samples/* -text

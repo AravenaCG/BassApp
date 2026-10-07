@@ -1,11 +1,12 @@
 import {mountPractice} from './practice-ui.mjs';
 import {catalog} from './practice-engine.mjs';
-import {mountAccount,api} from './account-ui.mjs';
+import {mountAccount,api} from './account-ui.mjs?v=4';
+import {mountHelp} from './help-ui.mjs';
 'use strict';
 const $ = (s, root = document) => root.querySelector(s);
 const $$ = (s, root = document) => [...root.querySelectorAll(s)];
 const escapeHTML = value => String(value ?? '').replace(/assets\/audio\/oido\.wav/g,'el audio de la prueba').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const names = {inicio:'Inicio',curso:'Mi curso',practicar:'Practicar',escalas:'Escalas y patrones',desafios:'Desafíos',recompensas:'Recompensas',planes:'Planes'};
+const names = {inicio:'Inicio',curso:'Mi curso',practicar:'Practicar',escalas:'Escalas y patrones',desafios:'Desafíos',recompensas:'Recompensas',planes:'Planes',ayuda:'Cómo usar Appbass'};
 const levels = {basic:'Básico',intermediate:'Intermedio',advanced:'Avanzado'};
 const toast = message => { $('#toast').textContent=message; $('#toast').classList.add('visible'); clearTimeout(toast.timeout); toast.timeout=setTimeout(()=>$('#toast').classList.remove('visible'),4000); };
 let progress = null, progressError = '', completionPending = false, currentLessonId = null;
@@ -25,12 +26,14 @@ function imageAsset(object,id,base,alt,cls='score-img'){const path=assetPath(obj
 function audioAsset(object,id,base){const path=assetPath(object,id,base);return path?`<audio controls preload="none" src="${escapeHTML(path)}" aria-label="Escuchar ejemplo"></audio>`:'';}
 
 let currentUser=null;
+const help=mountHelp();
 const workspace=document.createElement('article');workspace.className='workspace';
 $('#workspace-home').append(workspace);
 const practice=mountPractice(workspace,{onLesson:openLesson,onJournal:entry=>account.openJournal(entry)});
 const account=mountAccount({
   async onSession(user){currentUser=user;progress=null;instrument=user?.instrument||'electricBass';lessonLevel=user?.level||'basic';await practice.setUser(user);},
   onProgress:loadProgress,
+  onReady:user=>help.setUser(user),
   onPractice(){location.hash='practicar';navigate();},
   onLesson:openLesson
 });

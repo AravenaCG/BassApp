@@ -1,6 +1,28 @@
 import {test,expect} from '@playwright/test';
 const user={id:'test-person',email:'beta@example.test',displayName:'Beta',weeklyStudyMinutes:120,reminderDay:2,instrument:'electricBass',level:'basic',timeZone:'America/Argentina/Buenos_Aires',reminderEnabled:true,lastLesson:'B03'};
-async function mocks(page,authenticated=false){
+test('repertoire sources, MIDI reduction, CC0 playback and solo controls work on mobile',async({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));await mocks(page,true);
+ await page.setViewportSize({width:390,height:844});await page.goto('/appbass.html#practicar');
+ await expect(page.locator('#practice-play')).toBeEnabled();
+ await page.locator('#repertoire-library summary').click();
+ await expect(page.locator('[data-collection="beta-standards-v1"]')).toHaveCount(6);
+ await page.locator('[data-play-repertoire="entertainer"]').click();
+ await expect(page.locator('#exercise-title')).toHaveText('The Entertainer');
+ await expect(page.locator('#practice-bars button')).toHaveCount(152);
+ await expect(page.locator('#practice-source')).toContainText('Reducción automática');
+ await page.locator('#exercise-select').selectOption('swing-major');
+ await expect(page.locator('#practice-bars button')).toHaveCount(8);
+ await page.locator('#practice-play').click();await expect(page.locator('#practice-status')).toContainText('Samples CC0 activos');
+ await page.locator('#practice-mix').selectOption('bass-only');
+ await expect(page.locator('#practice-click')).not.toBeChecked();
+ await expect(page.locator('#practice-guide')).toBeChecked();
+ await page.locator('#practice-mix').selectOption('no-bass');
+ await page.locator('#practice-stop').click();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+ expect(errors).toEqual([]);
+});
+async function mocks(page,authenticated=false,showTour=false){
+ if(!showTour)await page.addInitScript(()=>localStorage.setItem('appbass-tour-v1-test-person','seen'));
  let logged=authenticated;
  await page.route('**/api/**',async route=>{
   const path=new URL(route.request().url()).pathname;
@@ -28,6 +50,50 @@ test('root leads to canonical page; login, profile, personalized home and logout
  await page.locator('#logout').click();
  await expect(page.locator('#open-login')).toBeVisible();
  expect(errors).toEqual([]);
+});
+
+test('first authenticated visit shows a skippable tour, remembers dismissal and supports replay',async({page})=>{
+ await mocks(page,true,true);await page.goto('/appbass.html');
+ const tour=page.locator('#welcome-tour');
+ await expect(tour).toBeVisible();
+ await expect(tour.locator('.tour-count')).toHaveText('Paso 1 de 5');
+ await page.locator('#tour-next').click();
+ await expect(tour.locator('.tour-count')).toHaveText('Paso 2 de 5');
+ await page.locator('#tour-back').click();
+ await expect(tour.locator('.tour-count')).toHaveText('Paso 1 de 5');
+ await page.keyboard.press('Escape');await expect(tour).toBeHidden();
+ await page.reload();await expect(page.locator('#profile-button')).toBeVisible();
+ await expect(tour).toBeHidden();
+ await page.locator('nav [data-page=ayuda]').click();await page.locator('#help-tour').click();
+ for(let i=0;i<5;i++)await page.locator('#tour-next').click();
+ await expect(tour).toBeHidden();await expect(page).toHaveURL(/#practicar$/);
+});
+
+test('tour starts only after successful login, not while entering credentials',async({page})=>{
+ await mocks(page,false,true);await page.goto('/appbass.html');
+ await expect(page.locator('#welcome-tour')).toBeHidden();
+ await page.locator('#open-login').click();
+ await page.locator('#account-form [name=email]').fill('beta@example.test');
+ await page.locator('#account-form [name=password]').fill('testing-pass-123');
+ await expect(page.locator('#welcome-tour')).toBeHidden();
+ await page.locator('#account-submit').click();
+ await expect(page.locator('#auth-dialog')).toBeHidden();
+ await expect(page.locator('#welcome-tour')).toBeVisible();
+ await page.locator('#tour-skip').click();
+ await page.locator('#profile-button').click();await expect(page.locator('#profile-form')).toBeVisible();
+});
+
+test('guest help is accessible on mobile, FAQ expands and manual tour can be skipped',async({page})=>{
+ await page.setViewportSize({width:390,height:844});await mocks(page);
+ await page.goto('/appbass.html#ayuda');
+ await expect(page.locator('#ayuda')).toBeVisible();
+ await expect(page.locator('#welcome-tour')).toBeHidden();
+ const faq=page.locator('.help-faq details').filter({hasText:'¿Qué se guarda y dónde?'});
+ await faq.locator('summary').click();await expect(faq.locator('p')).toBeVisible();
+ await page.locator('#help-tour').click();await expect(page.locator('#welcome-tour')).toBeVisible();
+ await page.screenshot({path:'outputs/tour-mobile.png'});
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ await page.locator('#tour-skip').click();await expect(page.locator('#welcome-tour')).toBeHidden();
 });
 test('practice selection changes notes, difficulty, sound clock and loops',async({page})=>{
  const errors=[];page.on('pageerror',e=>errors.push(e.message));await mocks(page);

@@ -46,6 +46,17 @@ button.avatar { border:1px solid #46707d; cursor:pointer }
 #detail-content .score-img { cursor:zoom-in }
 .score-zoom { width:100%; max-width:none }
 .record-takes { display:grid; gap:16px; width:100% }
+.help-intro { margin-bottom:28px }
+.help-intro .secondary { display:inline-block; margin:10px }
+.help-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr)); gap:18px; margin-bottom:32px }
+.help-grid p,.help-faq p,#tour-text { line-height:1.75; color:var(--muted) }
+.help-faq details { border:1px solid var(--line); border-radius:10px; padding:18px; margin:12px 0 }
+.help-faq summary { line-height:1.5; cursor:pointer }
+#welcome-tour { max-width:620px; width:calc(100% - 24px) }
+.tour-count { color:var(--cyan); margin-top:24px }
+.tour-actions { display:flex; flex-wrap:wrap; gap:12px; justify-content:flex-end; margin-top:28px }
+.tour-actions button { min-height:44px }
+footer a { color:var(--cyan) }
 @media(max-width:650px) {
   .topbar { padding:14px 18px }
   .top-right { width:100%; justify-content:space-between }
@@ -57,3 +68,9 @@ button.avatar { border:1px solid #46707d; cursor:pointer }
   dialog { width:calc(100% - 16px); padding:20px; max-height:94dvh }
   .today-card .button-row button { width:100% }
 }
+.repertoire-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:18px;margin:20px 0}
+.repertoire-grid article{padding:20px;border:1px solid #42536a;border-radius:12px;background:#0b1420;min-width:0}
+.repertoire-grid p,#practice-source{line-height:1.6;color:#b7c9de}
+.repertoire-grid a,#practice-source a{color:#48e3ed;text-decoration:underline}
+.practice-legend{font-size:.8rem;line-height:1.8}
+.practice-legend span:nth-child(1){color:#48e3ed}.practice-legend span:nth-child(2){color:#ff6cba}.practice-legend span:nth-child(3){color:#88ff99}.practice-legend span:nth-child(4){color:#ffc571}.practice-legend span:nth-child(5){color:#bd8cff}

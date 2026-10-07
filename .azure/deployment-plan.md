@@ -1,6 +1,6 @@
 # Appbass — deployment plan
 
-Status: Deployed and verified. User approved implementation and existing deployment workflow.
+Status: Validated by azure-validate. User requested push through existing workflow.
 Updated: 2026-10-06.
 
 ## Approved target
@@ -14,6 +14,11 @@ Updated: 2026-10-06.
 - Existing USD20 budget scoped to rg-appbass-prod does not cover SQL in oesatgroup. This release changes neither budget nor billing configuration.
 
 ## Release scope
+
+Current release: guided help/tour, louder practice audio, four original sample-backed
+studies, six traceable beta repertoire entries (two playable Joplin reductions and
+four Morton external score references), audio mix modes and harmonic neon colors.
+No SQL, identity, infrastructure, budget or tier changes.
 
 See beta-improvements-plan.md: accounts/profile, isolated persistent progress and activity,
 in-app reminders, original practice catalog and synchronized audio/visuals, course UX.
@@ -51,3 +56,32 @@ existing resources, no infrastructure declaration or role assignment changes.
 
 Update appbass image to prior known-good SHA tag. Keep additive database fields/tables;
 do not drop data. Preserve all environment settings and secrets.
+
+## 7. Validation Proof — repertoire release, 2026-10-07 02:57 UTC
+
+Recipe: existing GitHub Actions CI/CD, Azure CLI image-only update.
+
+- [x] All validation checks pass:
+  - `node --test tests/study.test.mjs tests/repertoire.test.mjs`: 12/12 passed.
+  - `corepack pnpm exec tsc --noEmit --incremental false`: exit 0.
+  - `corepack pnpm build:azure`: exit 0; final package includes MIDI-60 sample root.
+  - `APPBASS_TEST_URL=http://127.0.0.1:3101 corepack pnpm exec playwright test`:
+    8/8 passed on freshly restarted production server (12.3 seconds).
+  - Browser checks cover mobile CC0 sample decode/playback, repertoire, mix controls,
+    existing accounts with mocked APIs, help tour, loops, registration layout and lessons.
+  - Desktop visual inspection passed. Piano sample pitch checked: ~260.87 Hz, MIDI 60.
+  - SHA-256 asset verification passes; .gitattributes preserves downloaded bytes.
+  - `git diff --check`: no whitespace errors.
+  - `az account show`: confirmed user-approved subscription d8a9c4b4-89a1-482d-88dd-ac38d3d289a1.
+  - `az containerapp show`: appbass / rg-appbass-prod / Brazil South; identity None;
+    existing SQL secret name preserved. No secret values accessed.
+  - `az role assignment list --resource-group rg-appbass-prod`: existing deployment
+    service principal has Contributor at resource-group scope. No new assignments needed.
+  - Dockerfile and lockfile reviewed; CI runs the same tests, typecheck and production
+    build before updating the image. Local Docker build deferred to that CI gate.
+  - Static RBAC/infra review: no changes to Bicep, identities or service integrations.
+    Template validation, what-if, provisioning quotas and new-policy checks are N/A
+    to this image-only update. No ACR or managed-identity SQL flow is used.
+
+Deployment must preserve the existing Container App configuration; no Bicep apply.
+Post-push verification: await workflow success, healthy revision and live browser checks.

@@ -1,4 +1,5 @@
-export const GROUPS={technique:'Técnica',application:'Aplicación musical',songs:'Piezas originales'};
+import {activeRepertoire,backingTracks} from './repertoire.mjs';
+export const GROUPS={technique:'Técnica',application:'Aplicación musical',songs:'Piezas originales',backing:'Pistas originales · samples CC0',standards:'Repertorio beta · ragtime'};
 export const catalog=[
  {id:'open-strings',title:'Cuerdas al aire',group:'technique',level:'basic',minutes:5,goal:'Sostener el pulso y cambiar de cuerda',generated:'strings'},
  {id:'major-scale',title:'Escala de Do mayor',group:'technique',level:'basic',minutes:5,goal:'Reconocer notas y coordinar ambas manos',generated:'scale'},
@@ -11,9 +12,13 @@ export const catalog=[
  {id:'turnaround',title:'Turnarounds y reharmonización',group:'application',level:'advanced',minutes:15,goal:'Seguir cambios armónicos más frecuentes',lesson:'A07',material:'solo'},
  {id:'first-groove',title:'Primer encuentro',group:'songs',level:'basic',minutes:8,goal:'Acompañar una pieza original de ocho compases',generated:'song1'},
  {id:'evening',title:'Paseo al atardecer',group:'songs',level:'basic',minutes:10,goal:'Explorar una progresión menor en una pieza original',generated:'song2'}
+ ,...backingTracks.map(track=>({id:track.id,title:track.title,group:'backing',level:'intermediate',minutes:10,goal:'Practicar con acompañamiento original; no es una transcripción de un standard',generated:track.id})),
+ ...activeRepertoire().filter(r=>r.midi).map(r=>({...r,group:'standards',level:'advanced',minutes:15,goal:'Reducción automática didáctica del registro grave del piano; no es una parte original de contrabajo'}))
 ];
 const roots={C:36,D:38,E:40,F:29,G:31,A:33,B:35};
 const pc={C:0,D:2,E:4,F:5,G:7,A:9,B:11};
+// +4 dB for musical voices; keep the short metronome click at its existing level.
+export const PRACTICE_MUSIC_BOOST=10**(4/20);
 export function generatedScore(type, difficulty='roots') {
   if(type==='strings'||type==='scale') {
     const pitches=type==='strings'?[28,28,33,33,38,38,43,43]:[36,38,40,41,43,45,47,48,47,45,43,41,40,38,36,36];
@@ -21,20 +26,21 @@ export function generatedScore(type, difficulty='roots') {
       bars:Array.from({length:pitches.length/4},(_,i)=>({beat:i*4,length:4,chord:type==='scale'?'C':'',root:type==='scale'?36:null,quality:'major'})),
       notes:pitches.map((midi,beat)=>({beat,duration:1,midi}))};
   }
-  const chords=type==='blues'?['C7','C7','C7','C7','F7','F7','C7','C7','G7','F7','C7','G7']:
-    type==='song2'?['Am','Am','Dm','Dm','E7','E7','Am','Am']:['C','C','F','F','G7','G7','C','C'];
-  const bars=chords.map((chord,i)=>({beat:i*4,length:4,chord,root:roots[chord[0]],quality:chord.includes('m')?'minor':chord.includes('7')?'dominant':'major'}));
+  const track=backingTracks.find(t=>t.id===type);
+  const chords=track?.chords||(type==='blues'?['C7','C7','C7','C7','F7','F7','C7','C7','G7','F7','C7','G7']:
+    type==='song2'?['Am','Am','Dm','Dm','E7','E7','Am','Am']:['C','C','F','F','G7','G7','C','C']);
+  const bars=chords.map((chord,i)=>({beat:i*4,length:4,chord,root:roots[chord[0]],quality:chord.includes('maj7')?'major-seventh':chord.includes('m7b5')?'half-diminished':chord.includes('m')?'minor':chord.includes('7')?'dominant':'major'}));
   const notes=[];
   for (let i=0;i<bars.length;i++) {
-    const b=bars[i], third=b.quality==='minor'?3:4;
-    const intervals=difficulty==='roots'?[0,0]:difficulty==='fifths'?[0,7]:[0,third,7,b.quality==='dominant'?10:12];
+    const b=bars[i], third=['minor','half-diminished'].includes(b.quality)?3:4,fifth=b.quality==='half-diminished'?6:7;
+    const intervals=difficulty==='roots'?[0,0]:difficulty==='fifths'?[0,fifth]:[0,third,fifth,b.chord.includes('7')?(b.quality==='major-seventh'?11:10):12];
     intervals.forEach((n,j)=>notes.push({beat:b.beat+j*4/intervals.length,duration:4/intervals.length,midi:b.root+n}));
     if(difficulty==='walking') {
       const next=bars[(i+1)%bars.length].root;
       notes[notes.length-1].midi=next+1;
     }
   }
-  return {tempo:72,beatsPerBar:4,totalBeats:bars.length*4,bars,notes};
+  return {tempo:72,beatsPerBar:4,totalBeats:bars.length*4,bars,notes,style:track?.style};
 }
 export function parseScore(xml, Parser=globalThis.DOMParser) {
   const doc=new Parser().parseFromString(xml,'application/xml');
@@ -87,7 +93,7 @@ export function playablePosition(midi,instrument='electricBass') {
 }
 // One AudioContext timeline drives sound, cursor, falling notes, tempo and loops.
 export class PracticeEngine {
-  constructor(onFrame=()=>{},onEnd=()=>{}) {this.onFrame=onFrame;this.onEnd=onEnd;this.nodes=new Set();this.playing=false;this.beat=0;this.guide=true;this.metronome=true;this.loop=false;this.increment=0;this.tempo=72;this.volume=.6;}
+  constructor(onFrame=()=>{},onEnd=()=>{}) {this.onFrame=onFrame;this.onEnd=onEnd;this.nodes=new Set();this.playing=false;this.beat=0;this.guide=true;this.mix='full';this.metronome=true;this.loop=false;this.increment=0;this.tempo=72;this.volume=.6;}
   load(score){this.stop();this.score=score;this.tempo=score.tempo;this.start=0;this.end=score.totalBeats;this.beat=0;}
   position(){return this.playing?this.anchorBeat+(this.context.currentTime-this.anchorTime)*this.tempo/60:this.beat;}
   async play(){
@@ -95,25 +101,64 @@ export class PracticeEngine {
     this.context??=new (window.AudioContext||window.webkitAudioContext)();
     const run=this.playRun=(this.playRun||0)+1;
     await this.context.resume();
+    if(!this.output){
+      this.output=this.context.createDynamicsCompressor();this.output.threshold.value=-6;this.output.knee.value=6;this.output.ratio.value=12;this.output.attack.value=.003;this.output.release.value=.15;this.output.connect(this.context.destination);
+    }
+    this.samplesReady??=this.loadSamples();await this.samplesReady;
     if(run!==this.playRun)return;
     if(this.beat>=this.end)this.beat=this.start;
     this.playing=true;this.anchorBeat=this.beat;this.anchorTime=this.context.currentTime+.06;this.schedule();this.tick();
   }
   tone(midi,start,duration,gain=.1,type='triangle'){
+    if(this.volume<=0)return;
     const o=this.context.createOscillator(),g=this.context.createGain();
     o.type=type;o.frequency.value=440*2**((midi-69)/12);
     g.gain.setValueAtTime(0,start);g.gain.linearRampToValueAtTime(gain*this.volume,start+.008);
     g.gain.exponentialRampToValueAtTime(.0001,start+Math.max(.025,duration));
-    o.connect(g);g.connect(this.context.destination);o.start(start);o.stop(start+duration+.03);
+    o.connect(g);g.connect(this.output||this.context.destination);o.start(start);o.stop(start+duration+.03);
     this.nodes.add(o);o.onended=()=>{this.nodes.delete(o);o.disconnect();g.disconnect();};
+  }
+  async loadSamples(){
+    this.buffers={};
+    await Promise.all(['piano-c3','hihat'].map(async name=>{
+      try{
+        const r=await fetch(`samples/${name}.wav`,{signal:AbortSignal.timeout(10000)});if(!r.ok)throw Error();
+        const buffer=await this.context.decodeAudioData(await r.arrayBuffer());
+        let peak=0;for(let c=0;c<buffer.numberOfChannels;c++)for(const n of buffer.getChannelData(c))peak=Math.max(peak,Math.abs(n));
+        if(peak>0)for(let c=0;c<buffer.numberOfChannels;c++){const data=buffer.getChannelData(c);for(let i=0;i<data.length;i++)data[i]/=peak;}
+        this.buffers[name]=buffer;
+      }catch{/* Offline/network failures retain synthesized accompaniment. */}
+    }));
+    this.sampleStatus=this.buffers['piano-c3']&&this.buffers.hihat?'Samples CC0 activos':'Samples incompletos: respaldo sintetizado activo';
+  }
+  sample(name,midi,start,duration,gain){
+    if(this.volume<=0)return;
+    const buffer=this.buffers?.[name];
+    if(!buffer){this.tone(midi,start,duration,gain,'sine');return;}
+    const source=this.context.createBufferSource(),g=this.context.createGain();source.buffer=buffer;
+    // VCSL's legacy C3 uses the C3=middle-C convention (~261 Hz), MIDI 60.
+    source.playbackRate.value=name==='piano-c3'?2**((midi-60)/12):1;
+    g.gain.setValueAtTime(gain*this.volume,start);g.gain.exponentialRampToValueAtTime(.0001,start+Math.max(.025,duration));
+    source.connect(g);g.connect(this.output||this.context.destination);source.start(start);source.stop(start+duration+.03);
+    this.nodes.add(source);source.onended=()=>{this.nodes.delete(source);source.disconnect();g.disconnect();};
   }
   schedule(){
     const from=this.anchorBeat,until=this.end,s=60/this.tempo;
-    if(this.guide)for(const n of this.score.notes)if(n.beat>=from&&n.beat<until)
-      this.tone(n.midi,this.anchorTime+(n.beat-from)*s,Math.min(n.duration,until-n.beat)*s*.85,.13);
-    for(const bar of this.score.bars)if(bar.beat>=from&&bar.beat<until&&bar.root!==null){
-      const third=bar.quality.includes('minor')?3:4;
-      for(const interval of [12,12+third,19])this.tone(bar.root+interval,this.anchorTime+(bar.beat-from)*s,Math.min(2,bar.length)*s,.018,'sine');
+    if(this.guide&&this.mix!=='no-bass')for(const n of this.score.notes)if(n.beat>=from&&n.beat<until)
+      this.tone(n.midi,this.anchorTime+(n.beat-from)*s,Math.min(n.duration,until-n.beat)*s*.85,.13*PRACTICE_MUSIC_BOOST);
+    if(this.mix!=='bass-only'){
+      for(const n of this.score.backing||[])if(n.beat>=from&&n.beat<until)this.sample('piano-c3',n.midi,this.anchorTime+(n.beat-from)*s,Math.min(n.duration,until-n.beat)*s,.035*PRACTICE_MUSIC_BOOST);
+      for(const bar of this.score.bars)if(bar.beat>=from&&bar.beat<until&&bar.root!==null){
+        const third=bar.quality.includes('minor')||bar.quality==='half-diminished'?3:4;
+        const intervals=[12,12+third,bar.quality==='half-diminished'?18:19];
+        if(bar.chord.includes('7'))intervals.push(bar.quality==='major-seventh'?23:22);
+        for(const interval of intervals)this.sample('piano-c3',bar.root+interval,this.anchorTime+(bar.beat-from)*s,Math.min(2,bar.length)*s,.018*PRACTICE_MUSIC_BOOST);
+      }
+      if(this.score.style)for(let b=Math.ceil(from);b<until;b++){
+        this.sample('hihat',81,this.anchorTime+(b-from)*s,.15,.07);
+        const off=this.score.style==='swing'?2/3:1/2;
+        if(b+off<until)this.sample('hihat',81,this.anchorTime+(b+off-from)*s,.1,.035);
+      }
     }
     if(this.metronome)for(let b=Math.ceil(from);b<until;b++)this.tone(b%this.score.beatsPerBar===0?88:81,this.anchorTime+(b-from)*s,.035,.08,'sine');
   }

@@ -7,7 +7,7 @@ export async function api(path,body,method='POST'){
   return data;
 }
 const days=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
-export function mountAccount({onSession,onProgress,onPractice,onLesson}) {
+export function mountAccount({onSession,onProgress,onPractice,onLesson,onReady=()=>{}}) {
   let user=null,state=null;
   const dialog=document.querySelector('#auth-dialog');
   dialog.innerHTML=`
@@ -76,6 +76,7 @@ export function mountAccount({onSession,onProgress,onPractice,onLesson}) {
         reminder.querySelectorAll('button').forEach(b=>b.onclick=async()=>{try{await api('/api/activity',{kind:'reminder',action:b.dataset.act==='snooze'?'snooze':'dismiss'});reminder.hidden=true;if(b.dataset.act==='start')onPractice();}catch(e){reminder.querySelector('[role=status]').textContent=e.message;}});
       }
       await onSession(user);await onProgress();
+      onReady(user);
     } catch(e){home.textContent='No pudimos cargar tu cuenta. Podés volver a iniciar sesión.';login.hidden=false;register.hidden=false;}
   }
   form.onsubmit=async e=>{
