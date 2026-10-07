@@ -8,3 +8,8 @@ node_modules
 .azure
 Microsoft
 *.tsbuildinfo
+outputs
+work
+.agents
+.codex
+.env*

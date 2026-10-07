@@ -1,0 +1,59 @@
+.stack { display:grid; gap:18px }
+.stack label { display:grid; gap:7px; line-height:1.5 }
+.stack input,.stack select,.stack textarea { margin:0; box-sizing:border-box }
+select,textarea { font:inherit; color:var(--text); background:#0b1320; border:1px solid #36435a; border-radius:6px; padding:12px; max-width:100% }
+textarea { width:100%; min-height:95px; resize:vertical }
+input { box-sizing:border-box }
+.stack .check,.check { display:flex; align-items:center; gap:9px }
+.check input { width:20px; margin:0; flex-shrink:0 }
+.stack small { color:var(--muted); font-size:12px }
+.form-error { color:#ffb3b3; margin:0 }
+#auth-dialog,#profile-dialog { max-width:680px; box-sizing:border-box }
+dialog { box-sizing:border-box }
+.topbar { height:auto; min-height:84px; gap:14px; padding-block:16px; flex-wrap:wrap }
+.top-right { flex-wrap:wrap; gap:12px }
+button.avatar { border:1px solid #46707d; cursor:pointer }
+.profile[role=button] { cursor:pointer }
+.profile[role=button]:focus-visible { outline:2px solid var(--cyan) }
+.today-card,.reminder-card { margin-bottom:22px }
+.today-card h2 { margin:8px 0 }
+.reminder-card { border-color:#578795 }
+.practice-options { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:16px; padding:18px 24px }
+.practice-options label,.practice-transport label { display:grid; gap:8px; font-size:13px; color:var(--muted) }
+.practice-options select { width:100% }
+.workspace-header { flex-wrap:wrap }
+.workspace-header label { display:grid; gap:6px }
+#exercise-goal { color:var(--muted); margin:8px 0 }
+#practice-fretboard { width:100%; height:auto; min-height:140px; stroke:none }
+.practice-bars { display:flex; flex-wrap:wrap; gap:5px }
+.practice-bars button { min-width:55px; color:var(--text) }
+.practice-transport { display:flex; flex-wrap:wrap; gap:16px; align-items:end; padding:24px; background:#101a29; border-block:1px solid var(--line) }
+.practice-transport input[type=number] { width:95px; margin:0 }
+.practice-transport input[type=range] { width:120px }
+.practice-transport .check { display:flex; align-self:center }
+.practice-settings { margin:20px 24px }
+.practice-settings p { color:var(--muted); font-size:13px }
+.score-scroll { overflow:auto; background:white; border-radius:8px; margin-top:15px }
+.score-scroll svg { width:100%; min-width:650px; height:auto; stroke:none; display:block }
+.score-scroll .sounding { color:#087983; fill:#087983 }
+.journal-entry { border-top:1px solid var(--line); padding:16px 0 }
+.lesson-step { margin:16px 0; border:1px solid var(--line); border-radius:10px; padding:16px }
+.lesson-step>summary { font-size:17px }
+.lesson-status { display:flex; gap:8px; flex-wrap:wrap; margin:16px 0 }
+.lesson-status button[aria-pressed=true] { border-color:var(--cyan); color:var(--cyan) }
+.quiz { border:1px solid #386978; border-radius:10px; padding:20px; margin-top:18px }
+.quiz .button-row { flex-wrap:wrap }
+#detail-content .score-img { cursor:zoom-in }
+.score-zoom { width:100%; max-width:none }
+.record-takes { display:grid; gap:16px; width:100% }
+@media(max-width:650px) {
+  .topbar { padding:14px 18px }
+  .top-right { width:100%; justify-content:space-between }
+  .top-right .focus-pill { display:none }
+  .practice-options { grid-template-columns:1fr; padding:16px }
+  .practice-transport { padding:16px; gap:12px }
+  .practice-transport>button { min-height:46px }
+  .workspace-bottom { flex-wrap:wrap }
+  dialog { width:calc(100% - 16px); padding:20px; max-height:94dvh }
+  .today-card .button-row button { width:100% }
+}

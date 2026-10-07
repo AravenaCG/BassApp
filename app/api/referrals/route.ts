@@ -1,5 +1,12 @@
-import { currentBetaUser } from "../../../lib/beta-auth";
+import { requireBetaUser } from "../../../lib/beta-auth";
 import { getSqlPool, sql } from "../../../lib/azure-sql";
-
-export async function GET(request:Request){const user=await currentBetaUser(request);if(!user)return Response.json({error:"Inicia sesion."},{status:401});const r=await(await getSqlPool()).request().input("user",sql.UniqueIdentifier,user.id).query("SELECT referred_id AS referredId,created_at AS createdAt FROM dbo.beta_referrals WHERE referrer_id=@user ORDER BY created_at DESC");return Response.json({referrals:r.recordset},{headers:{"Cache-Control":"private, no-store"}});}
-export async function POST(request:Request){const user=await currentBetaUser(request);if(!user)return Response.json({error:"Inicia sesion."},{status:401});try{const body=await request.json();const referredId=String(body.referredId??"");if(!referredId)return Response.json({error:"Usuario referido invalido."},{status:400});const p=await getSqlPool();await p.request().input("referrer",sql.UniqueIdentifier,user.id).input("referred",sql.UniqueIdentifier,referredId).query("INSERT INTO dbo.beta_referrals(referrer_id,referred_id) VALUES(@referrer,@referred); INSERT INTO dbo.beta_points_ledger(user_id,amount,reason,reference) VALUES(@referrer,50,'referral',@referred)");return Response.json({ok:true},{status:201});}catch(e){console.error(e);return Response.json({error:"No se pudo registrar el referido."},{status:409});}}
+import { json, failure } from "../../../lib/http";
+export async function GET(request:Request) {
+  try { const user=await requireBetaUser(request);
+    const result=await(await getSqlPool()).request().input("user",sql.UniqueIdentifier,user.id)
+      .query("SELECT COUNT(*) AS total FROM dbo.beta_referrals WHERE referrer_id=@user");
+    return json({code:user.id,total:result.recordset[0].total});
+  } catch(e) { return failure(e); }
+}
+// Referrals are bound at registration, never by a client-supplied referred user ID.
+export async function POST() { return json({error:"Los referidos se vinculan al crear la cuenta desde un enlace de invitación."},405); }

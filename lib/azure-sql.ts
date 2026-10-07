@@ -9,7 +9,10 @@ function connectionString() {
 }
 
 export function getSqlPool() {
-  poolPromise ??= new sql.ConnectionPool(connectionString()).connect();
+  poolPromise ??= new sql.ConnectionPool(connectionString()).connect().catch(error => {
+    poolPromise = undefined;
+    throw error;
+  });
   return poolPromise;
 }
 

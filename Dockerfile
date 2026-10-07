@@ -2,9 +2,9 @@ FROM node:22-bookworm-slim AS build
 WORKDIR /app
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN corepack enable && corepack pnpm install --no-frozen-lockfile
+RUN corepack enable && corepack pnpm install --frozen-lockfile
 COPY . .
-RUN corepack pnpm build:azure
+RUN node --test tests/study.test.mjs && corepack pnpm exec tsc --noEmit --incremental false && corepack pnpm build:azure
 
 FROM node:22-bookworm-slim AS runtime
 WORKDIR /app

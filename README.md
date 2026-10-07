@@ -1,33 +1,46 @@
 # Appbass
 
-Curso y práctica de bajo y contrabajo de cuatro cuerdas, afinación Mi–La–Re–Sol. Jazz y blues: 40 lecciones y un atlas de 46 escalas y arpegios.
+Beta de aprendizaje de bajo y contrabajo de cuatro cuerdas (Mi–La–Re–Sol): 40 lecciones, atlas de 46 escalas y arpegios, y prácticas interactivas.
 
-## Interfaz HTML
+## Aplicación
 
-La interfaz está en public/index.html, public/style.css y public/app.js. public/appbass.html es la misma interfaz en la ruta usada por Sites. Los materiales del curso están en public/course.
+Interfaz canónica: public/appbass.html. La raíz redirige allí conservando parámetros y referidos. public/app.js integra curso, atlas y grabaciones; account-ui.mjs, practice-ui.mjs y practice-engine.mjs implementan cuentas y práctica. Materiales: public/course.
 
-El reproductor tiene play/pausa, detener, tempo, loop y bajo guía. Los audios se normalizaron para mejorar el volumen. La grabadora descarga una toma local y no la sube al servidor.
+- Once prácticas: técnica, blues, ii–V–I, walking, turnarounds y dos piezas originales sencillas. Las piezas generadas ofrecen fundamentales, quintas, arpegios y walking.
+- Audio sintetizado, notas y cursor comparten el reloj de Web Audio. Tempo, metrónomo, bajo guía, selección de compases, repetición y aumento gradual de velocidad.
+- Perfil, plan semanal, continuación de lecciones, estados leído/practicado/repasar, diario y comentarios.
+- Registro con invitación, máximo 20 cuentas; inicio/cierre de sesión y cambio de contraseña. Referidos atribuidos a altas reales, sin premios.
+- Recordatorio semanal dentro de la aplicación, con posposición. No se envían correos ni push y no existe aún recuperación de contraseña por correo.
+- Dos grabaciones locales comparables y descargables; no se suben al servidor y se pierden al cerrar la página. No se evalúa automáticamente la interpretación.
 
-## Progreso y puntos
+Las preferencias del reproductor se recuerdan por cuenta en ese navegador. Progreso y diario se guardan en SQL. Cada lección declarada completada suma 100 puntos una sola vez, incluso con solicitudes simultáneas. Los puntos no son canjeables. La partitura del reproductor es simplificada; las lecciones incluyen partituras y PDF completos.
 
-El backend autenticado de Sites guarda las lecciones completadas en D1 mediante GET y POST /api/progress. Cada lección suma 100 puntos una sola vez por usuario, incluso ante reintentos concurrentes. La finalización es declarada por el estudiante; no evalúa automáticamente su interpretación. Los puntos son de aprendizaje y no equivalen a premios canjeables.
+## Runtime y datos
 
-Código: app/api/progress/route.ts, lib/progress-service.mjs y db/schema.ts. Migraciones: drizzle/. La identidad la proporciona Sites; no se acepta un usuario enviado desde el navegador.
+Producción: Node.js 22 + Vinext/Nitro, Azure Container Apps Consumption en Brazil South. Base exclusivamente AppbassBeta en el servidor existente; **no modificar UsuariosOESAT**.
 
-## Desarrollo en Sites
+AZURE_SQL_CONNECTION_STRING se inyecta desde el secreto existente de Container Apps. Nunca poner credenciales en archivos versionados ni logs. Sesiones HttpOnly/Secure/SameSite, contraseñas scrypt, validación de origen, límites de entrada e intentos, consultas parametrizadas y autorización por sesión.
 
-Requiere Node 22.13 o superior y pnpm. Instalación: pnpm install --frozen-lockfile. Build: pnpm build. Las migraciones se generan con pnpm db:generate y se aplican al publicar en Sites.
+Esquema inicial: infra/appbass-beta.sql. Ampliación aditiva/repetible: infra/appbass-beta-v2.sql; verifica DB_NAME antes de escribir. db/ y drizzle/ conservan el adaptador histórico Sites/D1; ya no son la persistencia de las APIs de esta beta Azure.
 
-## Migración a Azure
+## Desarrollo y pruebas
 
-public/ contiene el frontend estático listo para tomar como raíz de publicación. La migración completa necesita además implementar /api/progress en un backend de Azure con autenticación y una base de datos; D1 y los encabezados de identidad de Sites son específicos del hosting actual. Una publicación de solo HTML conserva curso, audios, mapas y grabadora, pero no habilita puntos ni progreso persistente. La UI muestra el error de carga y no inventa un saldo local.
+Node >=22.13 y pnpm (Corepack).
 
-Antes de configurar el workflow de GitHub a Azure hay que elegir el recurso de Azure, confirmar la autenticación y proporcionar el secreto de publicación mediante los secretos del repositorio. No se incluyen credenciales en el código.
+```sh
+corepack pnpm install --frozen-lockfile
+node --test tests/study.test.mjs
+corepack pnpm exec tsc --noEmit --incremental false
+corepack pnpm build:azure
+corepack pnpm start:azure
+```
 
-## Estado de la beta
+Para las APIs se necesita la variable de conexión. En Windows, con acceso autorizado a Azure, scripts/with-beta-sql.ps1 -Action serve la obtiene únicamente en memoria y sirve en 127.0.0.1:3100. -Action migrate aplica solo la ampliación; no crea la base ni el esquema inicial.
 
-Desafíos por enlace disponibles. Ranking semanal, premios, referidos acreditados y pagos todavía pendientes.
+corepack pnpm exec playwright test prueba la interfaz con APIs simuladas (Edge local). Con servidor y SQL configurados, scripts/with-beta-sql.ps1 -Action integration verifica APIs reales creando cuentas e invitación temporales y eliminando exclusivamente esos datos al terminar. No ejecutar sin al menos dos lugares libres en la beta. APPBASS_TEST_URL permite elegir el servidor objetivo.
 
-## Verificación
+## Despliegue
 
-Ejecutar node tests/progress.test.mjs para comprobar reproducción, avance B01→B02, puntos idempotentes, concurrencia y separación entre usuarios. Los 332 audios se comprobaron contra saturación digital después de su normalización y compresión.
+Commits a main ejecutan .github/workflows/deploy-azure.yml: pruebas unitarias y tipos, build Docker, imagen inmutable por SHA en GHCR y actualización de la imagen de Container Apps mediante OIDC. No se reaprovisiona Bicep al publicar código, para preservar secretos y configuración.
+
+Aplicar la migración aditiva antes de publicar las APIs que dependan de ella. Para volver a una versión anterior, actualizar la imagen a sha-<commit> conservando el esquema aditivo. Ver .azure/deployment-plan.md.
