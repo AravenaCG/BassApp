@@ -44,10 +44,9 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      - uses: azure/arm-deploy@v2
-        with:
-          scope: resourcegroup
-          subscriptionId: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          resourceGroupName: ${{ env.AZURE_RESOURCE_GROUP }}
-          template: ./infra/containerapp.bicep
-          parameters: location=${{ env.AZURE_LOCATION }} appName=${{ env.AZURE_APP_NAME }} imageName=${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
+      - name: Update Container App image
+        run: |
+          az containerapp update \
+            --name "$AZURE_APP_NAME" \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --image "$IMAGE_NAME:sha-${{ github.sha }}"
