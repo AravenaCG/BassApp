@@ -1,7 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
-import vm from "node:vm";
 import { completeLesson, readProgress } from "../lib/progress-service.mjs";
 
 const sqlite = new DatabaseSync(":memory:");
@@ -22,21 +21,7 @@ const concurrent = await Promise.all(Array.from({ length: 8 }, () => completeLes
 assert.equal(concurrent.reduce((sum, result) => sum + result.awardedPoints, 0), 100);
 assert.deepEqual((await readProgress(db, "alice")).completed, ["B01", "B02", "B03"]);
 
-const html = readFileSync(new URL("../public/appbass.html", import.meta.url), "utf8");
-const js = readFileSync(new URL("../public/app.js", import.meta.url), "utf8");
-assert(html.includes('symbol id="play-icon"'));
-assert(!html.includes('id="play"'));
-assert(js.includes('id="play"'));
-assert(!js.includes('href="#play"'));
-const button = { innerHTML: "", setAttribute(key, value) { this[key] = value; } };
-const audio = { paused: true, play() { this.paused = false; return Promise.resolve(); }, pause() { this.paused = true; } };
-const context = { backing: audio, $: () => button, toast: () => { throw new Error("Unexpected playback error"); } };
-vm.createContext(context);
-vm.runInContext(js.slice(js.indexOf("function setPlayButton()"), js.indexOf("$('#play').addEventListener")), context);
-await vm.runInContext("togglePlayback()", context);
-assert.equal(audio.paused, false);
-assert.equal(button["aria-label"], "Pausar acompañamiento");
-await vm.runInContext("togglePlayback()", context);
-assert.equal(audio.paused, true);
-assert.equal(button["aria-label"], "Reproducir acompañamiento");
-console.log("PASS: playback toggle, B01→B02, idempotent points, concurrent completion, user isolation and invalid lessons");
+// The former fixed HTML/audio player was replaced by PracticeEngine.
+// Playback, loops, persistence and lesson navigation are covered in tests/browser/beta.spec.mjs.
+console.log("PASS: legacy D1 adapter — B01→B02, idempotent points, concurrent completion, user isolation and invalid lessons");
+sqlite.close();

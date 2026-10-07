@@ -1,6 +1,6 @@
 # Appbass — deployment plan
 
-Status: Validated. User approved implementation and existing deployment workflow.
+Status: Deployed and verified. User approved implementation and existing deployment workflow.
 Updated: 2026-10-06.
 
 ## Approved target
@@ -38,7 +38,11 @@ AppbassBeta before release. Existing credentials and user data preserved.
 - [x] Final Node production build (exit 0).
 - [x] Browser tests desktop/mobile (4/4), actual loop tempo increment and lesson navigation.
 - [x] Live target matches approved subscription/region. SQL secret retained. No managed identity is used by the application; SQL uses the existing scoped connection. Deployment service principal has Contributor on the resource group; prior OIDC pipeline succeeded.
-- [ ] GitHub pipeline succeeds, new revision healthy, live smoke test.
+- [x] GitHub pipeline 37558924199 succeeded; image sha-94de70a3bf31b6d9fa7b88077c9f97d8a450078a.
+- [x] Revision appbass--0000010 active and Healthy; live browser checks 4/4 (API mocks), plus separate real SQL/API integration passed against the public URL. All temporary accounts/activity/invitation removed.
+
+Published endpoint: https://appbass.whiteground-636d0547.brazilsouth.azurecontainerapps.io/
+Verified 2026-10-07 UTC (2026-10-06 Argentina). No runtime secrets or infrastructure tiers changed.
 
 Infrastructure what-if/quota provisioning checks do not apply: image-only update of
 existing resources, no infrastructure declaration or role assignment changes.
