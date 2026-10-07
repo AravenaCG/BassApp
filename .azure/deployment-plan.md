@@ -1,6 +1,6 @@
 # Appbass — deployment plan
 
-Status: Validated by azure-validate — harmony expansion; existing CI/CD image-only release.
+Status: Deployed and verified — harmony expansion; azure-validate / azure-deploy, existing CI/CD image-only release.
 Updated: 2026-10-07.
 
 ## Approved target
@@ -33,7 +33,7 @@ Implementation plan (authorized by user's continuation):
   retain existing lesson IDs, completion states and SQL schema.
 - [x] Verify source confidentiality, curriculum prerequisites, examples, desktop/mobile
   navigation, quizzes and audio; run unit tests, typecheck and production build.
-- [ ] azure-validate then azure-deploy: commit/push existing CI/CD, verify public release.
+- [x] azure-validate then azure-deploy: commit/push existing CI/CD, verify public release.
 
 Budget/scale: existing beta, <=20 users; zero additional resources or services.
 Subscription/region: previously user-confirmed target below, unchanged. Resource
@@ -72,7 +72,16 @@ verbatim chapters, copied exercises, pages, PDFs or embedded source recordings.
 - New review progress explicitly browser-local by account; existing SQL lesson
   completion/points untouched. No claims of automated instrumental evaluation.
 
-Publication pending: push approved by user, then await CI and verify live revision/UI.
+Publication verified 2026-10-07:
+- Code/image commit 632eb168f97d70ed82b1baac5769acfbd660f2c7, pushed to main.
+- GitHub Actions run 37621635633 succeeded (1m45s), including Docker build/tests.
+- appbass--0000012 Healthy and latest ready revision; latest receives 100% traffic.
+- Public URL browser suite: 11/11 passed (19.6s), including all 16 units on mobile.
+  Authentication interactions use mock APIs, without production SQL writes.
+- Real anonymous /api/auth/me HTTP 200; /harmony-curriculum.mjs and /harmony.css HTTP 200.
+- /docs/armonia-vol-1-def-v3.pdf HTTP 404; original source docs absent from Git/build.
+- Existing SQL secret name and identity configuration preserved, no infrastructure changes.
+- Endpoint: https://appbass.whiteground-636d0547.brazilsouth.azurecontainerapps.io/appbass.html#curso
 
 Current release: guided help/tour, louder practice audio, four original sample-backed
 studies, six traceable beta repertoire entries (two playable Joplin reductions and
