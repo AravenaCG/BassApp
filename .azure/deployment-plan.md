@@ -1,6 +1,6 @@
 # Appbass — deployment plan
 
-Status: Validated — remove visible bibliography section; azure-validate, existing CI/CD image-only release.
+Status: Deployed and verified — bibliography UI removal; azure-validate / azure-deploy, image-only release.
 Updated: 2026-10-07.
 
 ## Bibliography UI removal — validation proof, 2026-10-07
@@ -16,7 +16,11 @@ Only the public UI changes; lesson content and internal source metadata remain i
 - [x] Existing deployment ServicePrincipal Contributor role verified; no RBAC changes.
 - [x] Workflow reviewed: push to main updates only the image, retaining runtime secrets.
 Infrastructure compilation, what-if and provisioning checks are N/A: no infrastructure changes.
-Exclude unrelated generated tsconfig.tsbuildinfo from the commit. Post-push verification pending.
+Excluded unrelated generated tsconfig.tsbuildinfo from the commit.
+Publication verified: commit 77d07f41ef15a20a8749e0041ed424817a7c9d5d;
+GitHub Actions run 37670847684 completed successfully. Azure latest ready revision
+appbass--0000013 receives 100% of traffic. Live Edge/Playwright browser check passed:
+harmony course heading visible and `.harmony-sources` absent. No database or infrastructure changes.
 
 ## Approved target
 
