@@ -1,6 +1,6 @@
 # Appbass — deployment plan
 
-Status: Validated — course journey and inline reading; azure-validate, existing CI/CD image-only release.
+Status: Deployed and verified — course journey and inline reading; azure-validate / azure-deploy, image-only release.
 Updated: 2026-10-07.
 
 ## 7. Validation Proof — course journey and inline reading, 2026-10-07
@@ -23,7 +23,14 @@ prompts and expandable solutions. Complementary lesson theory is optional.
 - [x] Workflow reviewed: push to main publishes GHCR image and updates only Container App image.
 No new resources, tier/budget changes, schema migrations or production SQL writes.
 Infrastructure what-if, provisioning quotas and ACR identity checks are not applicable.
-Exclude unrelated tracked tsconfig.tsbuildinfo. Post-push verification pending.
+Excluded unrelated tracked tsconfig.tsbuildinfo.
+Publication verified 2026-10-07:
+- Commit/image fa7c03790cc53460706a1029605836ba99e6943e; Actions run 37684439941 succeeded.
+- appbass--0000014 Healthy, latest ready revision; receives 100% of traffic.
+- Public endpoint browser suite: 14/14 passed (33.7s), including course map, inline
+  scores, mobile overflow and persisted-save-shaped progress. APIs mocked: no SQL writes.
+- Real anonymous /api/auth/me: HTTP 200. Identity None and existing SQL secret name retained.
+- Endpoint: https://appbass.whiteground-636d0547.brazilsouth.azurecontainerapps.io/appbass.html#curso
 
 ## Bibliography UI removal — validation proof, 2026-10-07
 
