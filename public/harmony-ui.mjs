@@ -30,10 +30,10 @@ export class HarmonyAudio {
   return true;
  }
 }
-export function mountHarmony({onLesson,onPractice,onStopOtherAudio=()=>{}}){
+export function mountHarmony({onLesson,onPractice,onShow=()=>{},onStopOtherAudio=()=>{}}){
  const stylesheet=document.createElement('link');stylesheet.rel='stylesheet';stylesheet.href='harmony.css?v=1';document.head.append(stylesheet);
  const host=document.createElement('section');host.className='harmony-course';host.setAttribute('aria-label','Ruta de armonía para bajistas');
- document.querySelector('#course-list').before(host);
+ document.querySelector('#course-harmony').append(host);
  let key='appbass-harmony-v1-guest',done=[],current=harmonyUnits[0],storageWarning='',quizAnswers={};
  const audio=new HarmonyAudio();
  function save(){try{localStorage.setItem(key,JSON.stringify({version:HARMONY_VERSION,done,last:current.id}));storageWarning='';}catch{storageWarning='El navegador no permite guardar el repaso. Podés seguir estudiando, pero estos cambios no persistirán.';}}
@@ -62,7 +62,7 @@ export function mountHarmony({onLesson,onPractice,onStopOtherAudio=()=>{}}){
    <footer><h4>Conectá con las lecciones del curso</h4><div class="button-row">${current.lessons.map(id=>`<button class="secondary" data-harmony-lesson="${id}">Abrir ${id}</button>`).join('')}</div><p>Las lecciones conservan sus audios, partituras y progreso. Sus PDF anteriores no incluyen esta ampliación web.</p><div class="button-row">${index?`<button class="secondary" data-harmony-go="${harmonyUnits[index-1].id}">← Unidad anterior</button>`:''}${index<harmonyUnits.length-1?`<button class="secondary" data-harmony-go="${harmonyUnits[index+1].id}">Unidad siguiente →</button>`:''}</div></footer></article>
    `;
   host.querySelectorAll('[data-harmony-go]').forEach(b=>b.onclick=()=>open(b.dataset.harmonyGo));
-  host.querySelector('#harmony-course-list').onclick=()=>{audio.stop();const target=document.querySelector('#course-list');target.tabIndex=-1;target.focus();target.scrollIntoView({block:'start'});};
+  host.querySelector('#harmony-course-list').onclick=()=>{audio.stop();document.querySelector('[data-course-space="journey"]').click();const target=document.querySelector('#course-journey');target.tabIndex=-1;target.focus();target.scrollIntoView({block:'start'});};
   host.querySelectorAll('[data-harmony-lesson]').forEach(b=>b.onclick=()=>{audio.stop();onLesson(b.dataset.harmonyLesson);});
   const check=()=>{host.querySelector('#harmony-complete').disabled=!(current.questions.every((q,i)=>quizAnswers[i]===q.answer)&&host.querySelector('#harmony-played').checked);};
   host.querySelectorAll('[data-harmony-question]').forEach(field=>field.querySelectorAll('[data-harmony-answer]').forEach(b=>b.onclick=()=>{
@@ -82,10 +82,10 @@ export function mountHarmony({onLesson,onPractice,onStopOtherAudio=()=>{}}){
  }
  function open(id,updateHash=true){
   const next=harmonyUnits.find(u=>u.id===id);if(!next)return;
-  current=next;save();render();if(updateHash)location.hash='curso?unidad='+id;
+  current=next;onShow();save();render();if(updateHash)location.hash='curso?unidad='+id;
   host.querySelector('#harmony-title').focus();host.querySelector('.harmony-reader').scrollIntoView({block:'start'});
  }
- function fromHash(){const id=new URLSearchParams(location.hash.split('?')[1]||'').get('unidad');if(location.hash.startsWith('#curso')&&id&&id!==current.id)open(id,false);else if(!location.hash.startsWith('#curso'))audio.stop();}
+ function fromHash(){const query=new URLSearchParams(location.hash.split('?')[1]||''),id=query.get('unidad');if(location.hash.startsWith('#curso')&&harmonyUnits.some(u=>u.id===id)){onShow();if(id!==current.id)open(id,false);}else if(location.hash.startsWith('#curso')&&query.get('espacio')==='armonia')onShow();else if(!location.hash.startsWith('#curso'))audio.stop();}
  window.addEventListener('hashchange',fromHash);
  document.addEventListener('visibilitychange',()=>{if(document.hidden)audio.stop();});
  load(null);fromHash();

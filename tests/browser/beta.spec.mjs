@@ -2,7 +2,7 @@ import {test,expect} from '@playwright/test';
 import {harmonyUnits} from '../../public/harmony-curriculum.mjs';
 test('harmony route verifies understanding, remembers local progress and isolates logout',async({page})=>{
  await mocks(page,true);const errors=[];page.on('pageerror',e=>errors.push(e.message));
- await page.goto('/appbass.html#curso');await expect(page.locator('#profile-button')).toBeVisible();
+ await page.goto('/appbass.html#curso?espacio=armonia');await expect(page.locator('#profile-button')).toBeVisible();
  await expect(page.locator('#harmony-title')).toHaveText(harmonyUnits[0].title);
  await expect(page.locator('#harmony-complete')).toBeDisabled();
  await page.locator('[data-harmony-question="0"] [data-harmony-answer="0"]').click();
@@ -20,7 +20,7 @@ test('harmony route verifies understanding, remembers local progress and isolate
  await page.locator('#harmony-practice').click();await expect(page).toHaveURL(/#practicar$/);
  await expect(page.locator('#exercise-title')).toHaveText('Tríadas mayores y menores');
  await page.locator('#profile-button').click();await page.locator('#logout').click();
- await page.locator('nav [data-page=curso]').click();await expect(page.locator('#harmony-progress')).toContainText('0 de 16');
+ await page.locator('nav [data-page=curso]').click();await page.locator('[data-course-space=harmony]').click();await expect(page.locator('#harmony-progress')).toContainText('0 de 16');
  expect(errors).toEqual([]);
 });
 test('all harmony units are reachable on mobile and linked lesson theory is expanded',async({page})=>{
@@ -37,6 +37,7 @@ test('all harmony units are reachable on mobile and linked lesson theory is expa
  await page.evaluate(()=>{location.hash='curso?unidad=H04';});
  await page.locator('[data-harmony-lesson="B03"]').click();
  await expect(page.locator('.lesson-harmony')).toContainText('Intervalos: escuchar y medir una relación');
+ await page.locator('.lesson-deeper > summary').click();
  await page.locator('[data-harmony-open="H04"]').click();await expect(page.locator('#detail-dialog')).toBeHidden();
  await expect(page.locator('#harmony-title')).toHaveText(harmonyUnits[3].title);
 });
@@ -44,7 +45,7 @@ test('harmony malformed storage and blocked persistence do not prevent learning'
  await mocks(page,true);await page.addInitScript(()=>{
   localStorage.setItem('appbass-harmony-v1-test-person','{"version":1,"done":["unknown",null,"H01","H01"],"last":"bad"}');
  });
- await page.goto('/appbass.html#curso');await expect(page.locator('#profile-button')).toBeVisible();
+ await page.goto('/appbass.html#curso?espacio=armonia');await expect(page.locator('#profile-button')).toBeVisible();
  await expect(page.locator('#harmony-progress')).toContainText('1 de 16');
  await expect(page.locator('#harmony-title')).toHaveText(harmonyUnits[1].title);
  await page.evaluate(()=>{Storage.prototype.setItem=function(){throw Error('storage unavailable');};});
@@ -54,6 +55,57 @@ test('harmony malformed storage and blocked persistence do not prevent learning'
  await expect(page.locator('#harmony-progress')).toContainText('no permite guardar');
 });
 const user={id:'test-person',email:'beta@example.test',displayName:'Beta',weeklyStudyMinutes:120,reminderDay:2,instrument:'electricBass',level:'basic',timeZone:'America/Argentina/Buenos_Aires',reminderEnabled:true,lastLesson:'B03'};
+test('course map separates lesson journey from harmony and shows the score beside reading prompts',async({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));await mocks(page,true);
+ await page.goto('/appbass.html#curso');
+ await expect(page.locator('#course-journey')).toBeVisible();await expect(page.locator('#course-harmony')).toBeHidden();
+ await expect(page.locator('.journey-station')).toHaveCount(14);
+ await expect(page.locator('.journey-station.current button')).toHaveAttribute('data-lesson','B02');
+ await expect(page.locator('.journey-links path')).toHaveCount(13);
+ await page.screenshot({path:'outputs/course-map-desktop.png',fullPage:true});
+ await page.locator('#course-map [data-lesson="B01"]').click();
+ const block=page.locator('[data-reading-material="concepto"]');
+ await expect(block.locator('img')).toBeVisible();
+ await expect(block.locator('img')).toHaveAttribute('src',/B01\/assets\/renders\/concepto-p1.png$/);
+ await expect(block.locator('.reading-question')).toHaveCount(3);
+ expect(await block.locator('img').evaluate(img=>img.complete&&img.naturalWidth>0)).toBe(true);
+ await expect(page.locator('.lesson-deeper')).not.toHaveAttribute('open','');
+ await block.locator('.reading-question').first().locator('summary').click();
+ await expect(block.locator('.reading-question').first()).toContainText('Do · nota del acorde');
+ await block.locator('img').scrollIntoViewIfNeeded();await page.screenshot({path:'outputs/lesson-reading-desktop.png'});
+ await page.locator('#close-detail').click();await page.locator('[data-course-space=harmony]').click();
+ await expect(page.locator('#course-journey')).toBeHidden();await expect(page.locator('#course-harmony')).toBeVisible();
+ await expect(page.locator('.harmony-sources')).toHaveCount(0);
+ await page.locator('#harmony-course-list').click();await page.locator('#journey-layout').click();
+ await expect(page.locator('#course-list')).toBeVisible();await expect(page.locator('#course-map')).toBeHidden();
+ expect(errors).toEqual([]);
+});
+test('course marker advances only after persisted completion and resets on logout',async({page})=>{
+ await mocks(page,true);let done=['B01'];
+ await page.route('**/api/progress',async route=>{
+  if(route.request().method()==='POST')done=['B01','B02'];
+  await route.fulfill({json:{completed:done,totalPoints:done.length*100,states:{},nextLessonId:done.length===1?'B02':'B03',awardedPoints:100}});
+ });
+ await page.goto('/appbass.html#curso');await expect(page.locator('.journey-station.current button')).toHaveAttribute('data-lesson','B02');
+ await page.locator('#course-map [data-lesson="B02"]').click();
+ await page.locator('#complete-lesson').click();await expect(page.locator('#detail-label')).toHaveText('LECCIÓN B03');
+ await page.locator('#close-detail').click();await expect(page.locator('.journey-station.current button')).toHaveAttribute('data-lesson','B03');
+ await page.reload();await expect(page.locator('.journey-station.current button')).toHaveAttribute('data-lesson','B03');
+ await page.locator('#profile-button').click();await page.locator('#logout').click();
+ await expect(page.locator('.journey-station.current button')).toHaveAttribute('data-lesson','B01');
+});
+test('mobile map, level changes and inline reading are readable without horizontal overflow',async({page})=>{
+ await mocks(page);await page.setViewportSize({width:390,height:844});await page.goto('/appbass.html#curso');
+ await expect(page.locator('.journey-station')).toHaveCount(14);
+ await page.locator('[data-level=advanced]').click();await expect(page.locator('.journey-station')).toHaveCount(12);
+ await expect(page.locator('.journey-station.current button')).toHaveAttribute('data-lesson','A01');
+ await page.screenshot({path:'outputs/course-map-mobile.png',fullPage:true});
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+ await page.locator('#course-map [data-lesson="A01"]').click();
+ await expect(page.locator('.lesson-reading img').first()).toBeVisible();
+ expect(await page.locator('#detail-dialog').evaluate(d=>d.scrollWidth<=d.clientWidth+1)).toBe(true);
+ await page.locator('.lesson-reading img').first().scrollIntoViewIfNeeded();await page.screenshot({path:'outputs/lesson-reading-mobile.png'});
+});
 test('repertoire sources, MIDI reduction, CC0 playback and solo controls work on mobile',async({page})=>{
  const errors=[];page.on('pageerror',e=>errors.push(e.message));await mocks(page,true);
  await page.setViewportSize({width:390,height:844});await page.goto('/appbass.html#practicar');

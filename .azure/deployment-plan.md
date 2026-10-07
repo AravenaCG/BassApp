@@ -1,7 +1,29 @@
 # Appbass — deployment plan
 
-Status: Deployed and verified — bibliography UI removal; azure-validate / azure-deploy, image-only release.
+Status: Validated — course journey and inline reading; azure-validate, existing CI/CD image-only release.
 Updated: 2026-10-07.
+
+## 7. Validation Proof — course journey and inline reading, 2026-10-07
+
+User approved publication. Same subscription, region and image-only deployment recipe.
+Release: separate 40-lesson journey from the 16-unit harmony laboratory; responsive
+neon map/list, real persisted completion marker, inline scores grouped with reading
+prompts and expandable solutions. Complementary lesson theory is optional.
+- [x] All 20 unit tests passed, including score/asset references for all 40 lessons.
+- [x] `corepack pnpm exec tsc --noEmit --incremental false`: exit 0.
+- [x] `corepack pnpm build:azure`: exit 0 in preceding implementation turn.
+  All six changed public UI files match the built package by SHA-256, rechecked before push.
+- [x] Final local production browser suite: 14/14 passed (19.2s), API mocks only;
+  mobile/desktop navigation, real-save-shaped progress, reload/logout, scores and overflow.
+- [x] Desktop/mobile screenshots inspected; source documents remain excluded.
+- [x] `git diff --check`: clean; Docker repeats 20 unit tests, typecheck and production build.
+- [x] Live subscription matches approved target; appbass / Brazil South, identity None;
+  existing SQL secret name retained, values not accessed.
+- [x] Deployment ServicePrincipal Contributor role verified. No role or infrastructure changes.
+- [x] Workflow reviewed: push to main publishes GHCR image and updates only Container App image.
+No new resources, tier/budget changes, schema migrations or production SQL writes.
+Infrastructure what-if, provisioning quotas and ACR identity checks are not applicable.
+Exclude unrelated tracked tsconfig.tsbuildinfo. Post-push verification pending.
 
 ## Bibliography UI removal — validation proof, 2026-10-07
 

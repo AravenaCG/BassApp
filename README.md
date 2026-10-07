@@ -29,11 +29,17 @@ Esquema inicial: infra/appbass-beta.sql. Ampliación aditiva/repetible: infra/ap
 
 ## Desarrollo y pruebas
 
+Mi curso separa el recorrido de 40 lecciones (mapa o lista) del laboratorio
+complementario de 16 unidades. La nota del mapa señala la primera lección pendiente
+del nivel visible y se mueve con el progreso guardado en la cuenta; no bloquea otras
+estaciones. Los ejercicios de lectura muestran su partitura junto a las consignas
+y separan las soluciones. La teoría complementaria dentro de una lección es opcional.
+
 Node >=22.13 y pnpm (Corepack).
 
 ```sh
 corepack pnpm install --frozen-lockfile
-node --test tests/study.test.mjs tests/repertoire.test.mjs tests/harmony.test.mjs
+node --test tests/study.test.mjs tests/repertoire.test.mjs tests/harmony.test.mjs tests/course-ui.test.mjs
 corepack pnpm exec tsc --noEmit --incremental false
 corepack pnpm build:azure
 corepack pnpm start:azure

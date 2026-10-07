@@ -4,6 +4,7 @@ import {mountAccount,api} from './account-ui.mjs?v=4';
 import {mountHelp} from './help-ui.mjs';
 import {mountHarmony,lessonHarmonyHTML} from './harmony-ui.mjs';
 import {unitsForLesson} from './harmony-curriculum.mjs';
+import {mountCourseSpaces,journeyHTML,drawJourneyPath,readingExercisesHTML} from './course-ui.mjs';
 'use strict';
 const $ = (s, root = document) => root.querySelector(s);
 const $$ = (s, root = document) => [...root.querySelectorAll(s)];
@@ -32,7 +33,11 @@ const help=mountHelp();
 const workspace=document.createElement('article');workspace.className='workspace';
 $('#workspace-home').append(workspace);
 const practice=mountPractice(workspace,{onLesson:openLesson,onJournal:entry=>account.openJournal(entry)});
-const harmony=mountHarmony({onLesson:openLesson,onStopOtherAudio:()=>practice.stop(),async onPractice(id){await practice.selectExercise(id);location.hash='practicar';navigate();}});
+const courseSpaces=mountCourseSpaces();
+const harmony=mountHarmony({onLesson:openLesson,onShow:()=>courseSpaces.show('harmony'),onStopOtherAudio:()=>practice.stop(),async onPractice(id){await practice.selectExercise(id);location.hash='practicar';navigate();}});
+document.addEventListener('course-space-change',()=>harmony.stop());
+function syncCourseSpace(){if(!location.hash.startsWith('#curso'))return;const query=new URLSearchParams(location.hash.split('?')[1]||'');courseSpaces.show(query.get('espacio')==='armonia'||/^H(0[1-9]|1[0-6])$/.test(query.get('unidad')||'')?'harmony':'journey');}
+window.addEventListener('hashchange',syncCourseSpace);syncCourseSpace();
 const account=mountAccount({
   async onSession(user){currentUser=user;progress=null;instrument=user?.instrument||'electricBass';lessonLevel=user?.level||'basic';await practice.setUser(user);harmony.setUser(user);},
   onProgress:loadProgress,
@@ -44,7 +49,20 @@ $$('[data-page="recompensas"]').forEach(a=>a.hidden=true);
 $('.plan-link').hidden=true;
 const referralCard=$('.community-bottom .card:last-child');
 if(referralCard)referralCard.innerHTML='<p class="eyebrow">REFERIDOS</p><h3>Invitá a aprender.</h3><p>Encontrá tu enlace personal en Mi perfil. Las altas desde ese enlace quedan vinculadas a tu cuenta. La beta no entrega premios por referidos.</p>';
-async function renderCourse(){try{const data=await getCourse();const group=data.levels.find(l=>l.level===lessonLevel);$('#course-list').innerHTML=group.lessons.map((lesson,i)=>`<button class="lesson-card" data-lesson="${lesson.lessonId}"><span class="lesson-id">${lesson.lessonId}</span><div><h3>${escapeHTML(lesson.title)}</h3><p>${progress?.completed.includes(lesson.lessonId)?'✓ Completada · 100 puntos':(progress?.states?.[lesson.lessonId]?({read:'Leído',practiced:'Practicado',review:'Para repasar'}[progress.states[lesson.lessonId]]):`Lección ${String(i+1).padStart(2,'0')} · Teoría, oído y práctica`)}</p></div></button>`).join('');$$('[data-lesson]').forEach(b=>b.addEventListener('click',()=>openLesson(b.dataset.lesson)));}catch{$('#course-list').innerHTML='<p class="empty">No se pudo cargar el curso. Recargá la página para reintentar.</p>';}}
+async function renderCourse(){try{
+ const data=await getCourse(),group=data.levels.find(l=>l.level===lessonLevel),done=progress?.completed||[];
+ $('#journey-continue').disabled=false;
+ $('#course-map').innerHTML=journeyHTML(group.lessons,done);
+ requestAnimationFrame(()=>drawJourneyPath($('#course-map')));
+ const count=group.lessons.filter(l=>done.includes(l.lessonId)).length;
+ $('#journey-progress').textContent=`${levels[lessonLevel]} · ${count} de ${group.lessons.length} estaciones completadas. ${currentUser?(progress?'Avance guardado en tu cuenta.':progressError||'Cargando tu avance…'):'Modo exploración: iniciá sesión para guardar tu avance.'}`;
+ const next=data.levels.flatMap(l=>l.lessons).find(l=>!done.includes(l.lessonId));
+ $('#journey-continue').textContent=next?'Continuar · '+next.lessonId:'Recorrido completado · Repasar B01';
+ $('#journey-continue').onclick=()=>openLesson(next?.lessonId||'B01');
+ $$('[data-level]').forEach(b=>b.classList.toggle('selected',b.dataset.level===lessonLevel));
+ $('#course-list').innerHTML=group.lessons.map((lesson,i)=>`<button class="lesson-card" data-lesson="${lesson.lessonId}"><span class="lesson-id">${lesson.lessonId}</span><div><h3>${escapeHTML(lesson.title)}</h3><p>${done.includes(lesson.lessonId)?'✓ Completada · 100 puntos':(progress?.states?.[lesson.lessonId]?({read:'Leído',practiced:'Practicado',review:'Para repasar'}[progress.states[lesson.lessonId]]):`Lección ${String(i+1).padStart(2,'0')} · Teoría, oído y práctica`)}</p></div></button>`).join('');
+ $$('[data-lesson]',$('#curso')).forEach(b=>b.onclick=()=>openLesson(b.dataset.lesson));
+ }catch{for(const id of ['#course-list','#course-map'])$(id).innerHTML='<p class="empty">No se pudo cargar el curso. Recargá la página para reintentar.</p>';$('#journey-continue').disabled=true;}}
 $$('[data-level]').forEach(b=>b.addEventListener('click',()=>{lessonLevel=b.dataset.level;$$('[data-level]').forEach(c=>c.classList.toggle('selected',c===b));renderCourse();}));
 const readingText=object=>{
  if(typeof object==='string')return `<p>${escapeHTML(object)}</p>`;
@@ -71,7 +89,7 @@ async function openLesson(id){
    <span class="tag">${escapeHTML(levels[data.level])}</span><h2>${escapeHTML(data.title)}</h2>
    <div class="button-row"><a class="secondary" href="${base}${id}.pdf" target="_blank" rel="noopener">Abrir lección PDF</a><button class="primary" id="lesson-to-player">Practicar con acompañamiento</button></div>
    <div class="lesson-status" role="group" aria-label="Estado de la lección">${[['read','Leído'],['practiced','Practicado'],['review','Para repasar']].map(([state,label])=>`<button class="secondary" data-state="${state}" aria-pressed="${progress?.states?.[id]===state}">${label}</button>`).join('')}</div>
-   <details class="lesson-step" open><summary>1. Comprender el concepto</summary><h3>Objetivos</h3><ul>${data.learningObjectives.map(t=>`<li>${escapeHTML(t)}</li>`).join('')}</ul>${lessonHarmonyHTML(id)}${data.theory.blocks.map(t=>`<h3>${escapeHTML(t.title)}</h3><p>${escapeHTML(t.text)}</p>`).join('')}${readingText(data.readingExercises)}</details>
+   <details class="lesson-step" open><summary>1. Comprender el concepto</summary><section class="lesson-core"><p class="eyebrow">CONCEPTO DE ESTA LECCIÓN · ${id}</p><h3>Objetivos</h3><ul>${data.learningObjectives.map(t=>`<li>${escapeHTML(t)}</li>`).join('')}</ul>${data.theory.blocks.map(t=>`<h3>${escapeHTML(t.title)}</h3><p>${escapeHTML(t.text)}</p>`).join('')}</section>${readingExercisesHTML(data,base)}${unitsForLesson(id).length?`<details class="lesson-deeper"><summary>Profundizar · Laboratorio de armonía (opcional)</summary><p>Una explicación complementaria, no otra lección obligatoria. Su repaso es independiente del avance de ${id}.</p>${lessonHarmonyHTML(id)}</details>`:''}</details>
    <details class="lesson-step"><summary>2. Escuchar y leer</summary>${materials.map(m=>`<section class="material"><h3>${escapeHTML(m.title)}</h3><p>${escapeHTML(m.description)}</p>${m.renderAssetIds.map(a=>imageAsset(data,a,base,m.title)).join('')}${audioAsset(data,m.audioAssetId,base)}</section>`).join('')}</details>
    <details class="lesson-step"><summary>3. Tocar y explorar</summary>${data.instrumentAdaptations.filter(a=>a.instrument===instrument).map(a=>readingText(a.instructions)).join('')}
    ${(data.fretboardMaps||[]).filter(m=>m.instrument===instrument).map(m=>imageAsset(data,m.assetId,base,'Mapa del instrumento','map-img')).join('')}
@@ -136,7 +154,7 @@ function renderPoints(){
  else {pill.textContent=!currentUser?'Guardá tu avance':progressError?'Progreso no disponible':'Cargando puntos…';pill.title=progressError;}
 }
 async function loadProgress(){
- if(!currentUser){progress=null;progressError='Iniciá sesión para guardar tu progreso.';renderPoints();return;}
+ if(!currentUser){progress=null;progressError='Iniciá sesión para guardar tu progreso.';renderPoints();if(page==='curso')renderCourse();return;}
  try {const response=await fetch('/api/progress',{credentials:'same-origin',cache:'no-store'});const data=await response.json();if(!response.ok)throw new Error(data.error||'No pudimos cargar tu progreso.');progress=data;progressError='';}
  catch(error){progress=null;progressError=error.message;}
  renderPoints();if(page==='curso')renderCourse();if(currentLessonId&&$('#detail-dialog').open)renderCompletion(currentLessonId);
