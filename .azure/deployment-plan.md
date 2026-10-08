@@ -1,7 +1,40 @@
 # Appbass — deployment plan
 
-Status: Deployed and verified — transposable atlas, scale theory and repertoire listening; azure-validate / azure-deploy, image-only release.
+Status: Validated — first concert tour and configurable avatar; azure-validate, image-only release.
 Updated: 2026-10-07.
+
+## 7. Validation Proof — first tour and avatar, 2026-10-07 Argentina
+
+User explicitly authorized implementation and direct publication. Existing CI/CD
+recipe and approved subscription d8a9c4b4-89a1-482d-88dd-ac38d3d289a1, Brazil South.
+- [x] All validation checks pass:
+  - `node --test tests/study.test.mjs tests/repertoire.test.mjs tests/harmony.test.mjs tests/course-ui.test.mjs tests/atlas.test.mjs`: 28/28 passed.
+  - `corepack pnpm exec tsc --noEmit --incremental false`: exit 0.
+  - `corepack pnpm build:azure`: final package exit 0; all seven public files
+    verified byte-identical to the build by SHA-256.
+  - Final local production browser suite: 21/21 passed (24.6s), API mocks only.
+    Verifies mobile profile access, venues and musical titles, avatar settings,
+    profile/map synchronization, reload/account isolation, blocked storage,
+    successful-save-only travel, failed saves, no fake motion on initial load,
+    and existing theory, repertoire, accounts and course flows.
+  - Mobile/desktop screenshots inspected; final avatar avoids lesson-label overlap.
+  - `git diff --check` clean; docs remain ignored and untracked.
+  - Azure CLI/authentication confirmed; appbass / rg-appbass-prod / Brazil South,
+    identity None; existing SQL secret name retained, values never accessed.
+  - Existing deployment ServicePrincipal Contributor at resource-group scope verified.
+  - Static RBAC review: no new identities, permissions, resources or SQL operations.
+  - Dockerfile/lockfile and workflow reviewed: CI repeats 28 tests, typecheck and
+    build before an image-only update. Local Docker build delegated to that gate.
+  - Bicep compilation, what-if, provisioning quotas/policy and ACR identity checks
+    are N/A: no infrastructure, scale, tier, budget, network or schema changes.
+
+Scope: 40 unique imaginary venues, original SVG scenes and male/female avatars,
+electric bass or double bass, four accent colors and optional travel animation.
+Visual settings are local per account/browser, explicitly not cross-device.
+Existing SQL lesson IDs/completion/points remain untouched. Animation honors
+reduced motion and waits until the new progress is saved and the map is visible.
+Concluding concerts/rewards are clearly labelled Coming soon and not enabled.
+No additional services or billing configuration changes. Exclude tsconfig.tsbuildinfo.
 
 ## 7. Validation Proof — atlas, theory and listening, 2026-10-07
 

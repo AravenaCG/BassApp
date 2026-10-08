@@ -2,7 +2,26 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync,existsSync} from 'node:fs';
 import {journeyState,journeyHTML,readingExercisesHTML} from '../public/course-ui.mjs';
+import {TOUR_STOPS,tourStop,tourPreferences,readTourPreferences,writeTourPreferences,avatarSVG} from '../public/tour.mjs';
 const course=JSON.parse(readFileSync(new URL('../public/course/course.json',import.meta.url)));
+test('every real lesson has a unique concert-tour stop without replacing its educational title',()=>{
+ const lessons=course.levels.flatMap(l=>l.lessons);
+ assert.equal(TOUR_STOPS.length,40);assert.equal(new Set(TOUR_STOPS.map(s=>s.name)).size,40);
+ assert.deepEqual(TOUR_STOPS.map(s=>s.lessonId),lessons.map(l=>l.lessonId));
+ assert.equal(tourStop('B01').name,'Tocar en tu cuarto');assert.equal(tourStop('A12').name,'Show en River Plate');
+ for(const l of lessons){const html=journeyHTML([l]);assert.ok(html.includes(tourStop(l.lessonId).name));assert.ok(html.includes(l.title.replace(/&/g,'&amp;')));assert.ok(html.includes('venue-art'));}
+});
+test('tour appearance validates values, isolates accounts and tolerates unavailable storage',()=>{
+ const store=new Map(),storage={getItem:k=>store.get(k),setItem:(k,v)=>store.set(k,v)};
+ const first={id:'first'},second={id:'second'},look={character:'woman',color:'coral',motion:false};
+ assert.equal(writeTourPreferences(first,look,storage),true);assert.deepEqual(readTourPreferences(first,storage),look);
+ assert.deepEqual(readTourPreferences(second,storage),tourPreferences());assert.deepEqual(readTourPreferences(null,storage),tourPreferences());
+ assert.deepEqual(tourPreferences({character:'<script>',color:'<script>',motion:'no'}),tourPreferences());
+ const blocked={getItem(){throw Error('blocked');},setItem(){throw Error('blocked');}};
+ assert.deepEqual(readTourPreferences(first,blocked),tourPreferences());assert.equal(writeTourPreferences(first,look,blocked),false);
+ storage.setItem('appbass-tour-look-v1-first','bad json');assert.deepEqual(readTourPreferences(first,storage),tourPreferences());
+ assert.ok(!avatarSVG({color:'<script>'}).includes('<script>'));assert.notEqual(avatarSVG(look),avatarSVG(look,'doubleBass'));
+});
 test('journey follows first real gap, handles revisits and completed levels without inventing progress',()=>{
  const lessons=course.levels[0].lessons;
  assert.equal(journeyState(lessons)[0].state,'current');

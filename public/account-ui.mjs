@@ -1,3 +1,4 @@
+import {mountTourPreferences} from './tour.mjs';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export async function api(path,body,method='POST'){
   const r=await fetch(path,{method:body===undefined?'GET':method,credentials:'same-origin',cache:'no-store',
@@ -105,6 +106,7 @@ export function mountAccount({onSession,onProgress,onPractice,onLesson,onReady=(
       <label class="check"><input name="reminderEnabled" type="checkbox" ${user.reminderEnabled?'checked':''}>Recordatorio semanal dentro de la app</label>
       <button class="primary">Guardar preferencias</button><p role="status"></p></form>
       <div class="button-row"><button id="view-journal" class="secondary">Mi diario</button><button id="view-referrals" class="secondary">Mis referidos</button><button id="change-password" class="secondary">Cambiar contraseña</button><button id="logout" class="secondary">Cerrar sesión</button></div>`);
+    const appearance=document.createElement('div');panel.querySelector('form').after(appearance);mountTourPreferences(appearance,{user,instrument:user.instrument});
     const f=panel.querySelector('form');f.elements.instrument.value=user.instrument;f.elements.level.value=user.level;f.elements.reminderDay.value=user.reminderDay||1;
     f.onsubmit=async e=>{e.preventDefault();const b=Object.fromEntries(new FormData(f));b.weeklyStudyMinutes=Number(b.weeklyStudyMinutes);b.reminderDay=Number(b.reminderDay);b.reminderEnabled=f.elements.reminderEnabled.checked;const button=f.querySelector('button');button.disabled=true;try{await api('/api/profile',b,'PATCH');f.querySelector('[role=status]').textContent='Preferencias guardadas.';await refresh();}catch(e){f.querySelector('[role=status]').textContent=e.message;}finally{button.disabled=false;}};
     panel.querySelector('#logout').onclick=async()=>{try{await api('/api/auth/logout',{});panel.close();await refresh();}catch(e){f.querySelector('[role=status]').textContent=e.message;}};

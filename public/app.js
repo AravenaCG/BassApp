@@ -1,10 +1,11 @@
 import {mountPractice} from './practice-ui.mjs';
 import {catalog} from './practice-engine.mjs';
-import {mountAccount,api} from './account-ui.mjs?v=4';
+import {mountAccount,api} from './account-ui.mjs?v=5';
 import {mountHelp} from './help-ui.mjs';
 import {mountHarmony,lessonHarmonyHTML} from './harmony-ui.mjs';
 import {unitsForLesson} from './harmony-curriculum.mjs';
-import {mountCourseSpaces,journeyHTML,drawJourneyPath,readingExercisesHTML} from './course-ui.mjs';
+import {mountCourseSpaces,readingExercisesHTML} from './course-ui.mjs';
+import {tourStop} from './tour.mjs';
 import {mountAtlas} from './atlas-ui.mjs';
 'use strict';
 const $ = (s, root = document) => root.querySelector(s);
@@ -40,7 +41,7 @@ function syncCourseSpace(){if(!location.hash.startsWith('#curso'))return;const q
 window.addEventListener('hashchange',syncCourseSpace);syncCourseSpace();
 const scaleAtlas=mountAtlas({stopOtherAudio(){practice.stop();harmony.stop();}});
 const account=mountAccount({
-  async onSession(user){currentUser=user;progress=null;instrument=user?.instrument||'electricBass';lessonLevel=user?.level||'basic';await practice.setUser(user);harmony.setUser(user);scaleAtlas.setUser(user);},
+  async onSession(user){currentUser=user;progress=null;courseSpaces.setUser(user);instrument=user?.instrument||'electricBass';lessonLevel=user?.level||'basic';await practice.setUser(user);harmony.setUser(user);scaleAtlas.setUser(user);},
   onProgress:loadProgress,
   onReady:user=>help.setUser(user),
   onPractice(){location.hash='practicar';navigate();},
@@ -53,15 +54,14 @@ if(referralCard)referralCard.innerHTML='<p class="eyebrow">REFERIDOS</p><h3>Invi
 async function renderCourse(){try{
  const data=await getCourse(),group=data.levels.find(l=>l.level===lessonLevel),done=progress?.completed||[];
  $('#journey-continue').disabled=false;
- $('#course-map').innerHTML=journeyHTML(group.lessons,done);
- requestAnimationFrame(()=>drawJourneyPath($('#course-map')));
+ courseSpaces.render(group.lessons,done,!currentUser||!!progress);
  const count=group.lessons.filter(l=>done.includes(l.lessonId)).length;
  $('#journey-progress').textContent=`${levels[lessonLevel]} · ${count} de ${group.lessons.length} estaciones completadas. ${currentUser?(progress?'Avance guardado en tu cuenta.':progressError||'Cargando tu avance…'):'Modo exploración: iniciá sesión para guardar tu avance.'}`;
  const next=data.levels.flatMap(l=>l.lessons).find(l=>!done.includes(l.lessonId));
  $('#journey-continue').textContent=next?'Continuar · '+next.lessonId:'Recorrido completado · Repasar B01';
  $('#journey-continue').onclick=()=>openLesson(next?.lessonId||'B01');
  $$('[data-level]').forEach(b=>b.classList.toggle('selected',b.dataset.level===lessonLevel));
- $('#course-list').innerHTML=group.lessons.map((lesson,i)=>`<button class="lesson-card" data-lesson="${lesson.lessonId}"><span class="lesson-id">${lesson.lessonId}</span><div><h3>${escapeHTML(lesson.title)}</h3><p>${done.includes(lesson.lessonId)?'✓ Completada · 100 puntos':(progress?.states?.[lesson.lessonId]?({read:'Leído',practiced:'Practicado',review:'Para repasar'}[progress.states[lesson.lessonId]]):`Lección ${String(i+1).padStart(2,'0')} · Teoría, oído y práctica`)}</p></div></button>`).join('');
+ $('#course-list').innerHTML=group.lessons.map((lesson,i)=>`<button class="lesson-card" data-lesson="${lesson.lessonId}"><span class="lesson-id">${lesson.lessonId}</span><div><p class="list-venue">${escapeHTML(tourStop(lesson.lessonId).name)}</p><h3>${escapeHTML(lesson.title)}</h3><p>${done.includes(lesson.lessonId)?'✓ Completada · 100 puntos':(progress?.states?.[lesson.lessonId]?({read:'Leído',practiced:'Practicado',review:'Para repasar'}[progress.states[lesson.lessonId]]):`Lección ${String(i+1).padStart(2,'0')} · Teoría, oído y práctica`)}</p></div></button>`).join('');
  $$('[data-lesson]',$('#curso')).forEach(b=>b.onclick=()=>openLesson(b.dataset.lesson));
  }catch{for(const id of ['#course-list','#course-map'])$(id).innerHTML='<p class="empty">No se pudo cargar el curso. Recargá la página para reintentar.</p>';$('#journey-continue').disabled=true;}}
 $$('[data-level]').forEach(b=>b.addEventListener('click',()=>{lessonLevel=b.dataset.level;$$('[data-level]').forEach(c=>c.classList.toggle('selected',c===b));renderCourse();}));

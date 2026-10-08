@@ -21,6 +21,14 @@ Las preferencias del reproductor se recuerdan por cuenta en ese navegador. Progr
 
 ## Runtime y datos
 
+Mi curso incluye «Tu primera gira»: 40 escenarios imaginarios desde el cuarto hasta
+un Show en River Plate, sin sustituir los objetivos ni IDs de las lecciones.
+Avatar varón/mujer con bajo o contrabajo y cuatro colores; configurable en el mapa
+y en Mi perfil. Apariencia local por cuenta/navegador, no sincronizada entre dispositivos.
+El avatar avanza sólo después de guardar la finalización; movimiento desactivable
+y respetuoso de `prefers-reduced-motion`. Progreso SQL y puntos existentes sin cambios.
+Conciertos de cierre y recompensas figuran como «Próximamente», no desbloquean premios.
+
 Producción: Node.js 22 + Vinext/Nitro, Azure Container Apps Consumption en Brazil South. Base exclusivamente AppbassBeta en el servidor existente; **no modificar UsuariosOESAT**.
 
 AZURE_SQL_CONNECTION_STRING se inyecta desde el secreto existente de Container Apps. Nunca poner credenciales en archivos versionados ni logs. Sesiones HttpOnly/Secure/SameSite, contraseñas scrypt, validación de origen, límites de entrada e intentos, consultas parametrizadas y autorización por sesión.
