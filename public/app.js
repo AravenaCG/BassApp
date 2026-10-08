@@ -5,6 +5,7 @@ import {mountHelp} from './help-ui.mjs';
 import {mountHarmony,lessonHarmonyHTML} from './harmony-ui.mjs';
 import {unitsForLesson} from './harmony-curriculum.mjs';
 import {mountCourseSpaces,journeyHTML,drawJourneyPath,readingExercisesHTML} from './course-ui.mjs';
+import {mountAtlas} from './atlas-ui.mjs';
 'use strict';
 const $ = (s, root = document) => root.querySelector(s);
 const $$ = (s, root = document) => [...root.querySelectorAll(s)];
@@ -13,8 +14,8 @@ const names = {inicio:'Inicio',curso:'Mi curso',practicar:'Practicar',escalas:'E
 const levels = {basic:'Básico',intermediate:'Intermedio',advanced:'Avanzado'};
 const toast = message => { $('#toast').textContent=message; $('#toast').classList.add('visible'); clearTimeout(toast.timeout); toast.timeout=setTimeout(()=>$('#toast').classList.remove('visible'),4000); };
 let progress = null, progressError = '', completionPending = false, currentLessonId = null;
-let course, atlas, lessonLevel='basic', instrument='electricBass', selectedChallenge='blues';
-let coursePromise, atlasPromise, dialogRun=0, page='inicio';
+let course, lessonLevel='basic', instrument='electricBass', selectedChallenge='blues';
+let coursePromise, dialogRun=0, page='inicio';
 const challengeTypes = {
  blues:{title:'12 compases, tu groove',text:'Grabá una vuelta de blues en Do. Sostené la forma de 12 compases y un pulso cómodo. Tu amigo responde con su propia interpretación sobre la misma base.',level:'Básico / Intermedio'},
  motivo:{title:'Pregunta y respuesta',text:'Creá un motivo original de cuatro compases sobre un blues en Do. Tu amigo responde con otros cuatro compases, dejando espacio y silencios.',level:'Intermedio'},
@@ -22,7 +23,6 @@ const challengeTypes = {
 };
 async function getJSON(path){ const response=await fetch(path); if(!response.ok)throw Error('No se pudo cargar el contenido.'); return response.json(); }
 function getCourse(){return coursePromise ??= getJSON('course/course.json').then(d=>(course=d));}
-function getAtlas(){return atlasPromise ??= getJSON('course/atlas/atlas.json').then(d=>(atlas=d));}
 function assetPath(object,id,base){const a=object.assets.find(a=>a.assetId===id);return a?base+a.relativePath+'?v=0.2':null;}
 function assetLink(object,id,base,label){const path=assetPath(object,id,base);return path?`<a href="${escapeHTML(path)}" target="_blank" rel="noopener">${escapeHTML(label)}</a>`:'';}
 function imageAsset(object,id,base,alt,cls='score-img'){const path=assetPath(object,id,base);return path?`<img class="${cls}" src="${escapeHTML(path)}" alt="${escapeHTML(alt)}" loading="lazy">`:'';}
@@ -38,8 +38,9 @@ const harmony=mountHarmony({onLesson:openLesson,onShow:()=>courseSpaces.show('ha
 document.addEventListener('course-space-change',()=>harmony.stop());
 function syncCourseSpace(){if(!location.hash.startsWith('#curso'))return;const query=new URLSearchParams(location.hash.split('?')[1]||'');courseSpaces.show(query.get('espacio')==='armonia'||/^H(0[1-9]|1[0-6])$/.test(query.get('unidad')||'')?'harmony':'journey');}
 window.addEventListener('hashchange',syncCourseSpace);syncCourseSpace();
+const scaleAtlas=mountAtlas({stopOtherAudio(){practice.stop();harmony.stop();}});
 const account=mountAccount({
-  async onSession(user){currentUser=user;progress=null;instrument=user?.instrument||'electricBass';lessonLevel=user?.level||'basic';await practice.setUser(user);harmony.setUser(user);},
+  async onSession(user){currentUser=user;progress=null;instrument=user?.instrument||'electricBass';lessonLevel=user?.level||'basic';await practice.setUser(user);harmony.setUser(user);scaleAtlas.setUser(user);},
   onProgress:loadProgress,
   onReady:user=>help.setUser(user),
   onPractice(){location.hash='practicar';navigate();},
@@ -128,10 +129,7 @@ function renderQuiz(id){
 $('#close-detail').addEventListener('click',()=>$('#detail-dialog').close());
 $('#detail-dialog').addEventListener('close',()=>{$$('audio',$('#detail-dialog')).forEach(a=>a.pause());dialogRun++;});
 
-const translateTitle=title=>title.replace(/^[A-G](?=\s|#|b)/,n=>({C:'Do',D:'Re',E:'Mi',F:'Fa',G:'Sol',A:'La',B:'Si'}[n])).replace(/natural minor/gi,'menor natural').replace(/minor pentatonic/gi,'pentatónica menor').replace(/major pentatonic/gi,'pentatónica mayor').replace(/major/gi,'mayor').replace(/minor/gi,'menor').replace(/dominant/gi,'dominante').replace(/diminished/gi,'disminuido').replace(/augmented/gi,'aumentado').replace(/arpeggio/gi,'arpegio').replace(/mixolydian/gi,'mixolidio').replace(/dorian/gi,'dórico').replace(/lydian/gi,'lidio').replace(/phrygian/gi,'frigio').replace(/locrian/gi,'locrio').replace(/aeolian/gi,'eólico').replace(/ionian/gi,'jónico');
-async function renderAtlas(){try{const data=await getAtlas(),search=$('#atlas-search').value.toLowerCase();const list=data.items.filter(item=>(item.title+' '+translateTitle(item.title)).toLowerCase().includes(search));$('#atlas-list').innerHTML=list.length?list.map(item=>`<button class="atlas-card" data-atlas="${item.id}"><span class="atlas-id">${item.id} · ${item.id.startsWith('R')?'ARPEGIO':'ESCALA'}</span><h3>${escapeHTML(translateTitle(item.title))}</h3><p>${item.degrees.map(escapeHTML).join(' · ')}</p></button>`).join(''):'<p class="empty">No encontramos ese patrón. Probá con blues, mayor o minor.</p>';$$('[data-atlas]').forEach(b=>b.addEventListener('click',()=>openAtlas(b.dataset.atlas)));}catch{$('#atlas-list').innerHTML='<p class="empty">No se pudo cargar el atlas. Recargá la página para reintentar.</p>';}}
-$('#atlas-search').addEventListener('input',renderAtlas);
-async function openAtlas(id){const data=await getAtlas(),item=data.items.find(i=>i.id===id);if(!item)return;const base='course/atlas/';$('#detail-label').textContent='ESCALAS Y ARPEGIOS · '+id;$('#detail-content').innerHTML=`<h2>${escapeHTML(translateTitle(item.title))}</h2><p>Grados: ${item.degrees.map(escapeHTML).join(' · ')}</p><p>${escapeHTML(item.usage)}</p>${item.maps.map(m=>`<h3>${m.instrument==='electricBass'?'Bajo eléctrico':'Contrabajo'}</h3>${imageAsset(data,m.assetId,base,'Mapa '+item.title+' para '+m.instrument,'map-img')}${m.instrument==='doubleBass'?'<p>Mapa conceptual de semitonos. No representa una digitación ni distancias físicas del instrumento.</p>':''}`).join('')}<h3>Partitura y sonido</h3>${item.material.renderAssetIds.map(a=>imageAsset(data,a,base,item.title)).join('')}${audioAsset(data,item.material.audioAssetId,base)}<div class="asset-links">${assetLink(data,item.material.musicXmlAssetId,base,'MusicXML')}${assetLink(data,id+'-midi',base,'MIDI')}</div>`;$('#detail-dialog').showModal();}
+function renderAtlas(){scaleAtlas.render();}
 
 function showIncoming(){const query=new URLSearchParams(location.hash.split('?')[1]||'');const type=query.get('reto'),sender=query.get('de')?.slice(0,40);const challenge=challengeTypes[type];$('#incoming-challenge').innerHTML=challenge?`<article class="card incoming"><p class="eyebrow">${sender?escapeHTML(sender.toUpperCase())+' TE INVITA':'TENÉS UN DESAFÍO'}</p><h2>${escapeHTML(challenge.title)}</h2><p>${escapeHTML(challenge.text)}</p><a class="primary" href="#practicar">Abrir acompañamiento</a><p class="footnote">Compartí tu grabación con quien te invitó. En esta beta no se envían respuestas ni se acreditan puntos dentro de Appbass.</p></article>`:'';}
 $$('[data-challenge]').forEach(b=>b.addEventListener('click',()=>{selectedChallenge=b.dataset.challenge;$('#share-title').textContent=challengeTypes[selectedChallenge].title;$('#share-result').hidden=true;$('#share-dialog').showModal();}));

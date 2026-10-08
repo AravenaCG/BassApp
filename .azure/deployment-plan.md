@@ -1,7 +1,38 @@
 # Appbass — deployment plan
 
-Status: Deployed and verified — course journey and inline reading; azure-validate / azure-deploy, image-only release.
+Status: Validated — transposable atlas, scale theory and repertoire listening; azure-validate, image-only release.
 Updated: 2026-10-07.
+
+## 7. Validation Proof — atlas, theory and listening, 2026-10-07
+
+User approved publication of the pending local changes. Existing GitHub Actions
+CI/CD recipe; same confirmed subscription and Brazil South Container App.
+- [x] All validation checks pass:
+  - Azure CLI installed and authenticated; `az account show` confirms subscription
+    d8a9c4b4-89a1-482d-88dd-ac38d3d289a1.
+  - `node --test tests/study.test.mjs tests/repertoire.test.mjs tests/harmony.test.mjs tests/course-ui.test.mjs tests/atlas.test.mjs`: 26/26 passed again in this publication turn.
+  - `corepack pnpm exec tsc --noEmit --incremental false`: exit 0.
+  - `corepack pnpm build:azure`: final production build exit 0 in preceding turn;
+    all ten changed public files match that build by SHA-256, checked again now.
+  - Final-package local browser suite: 19/19 passed (20.4s), API mocks only.
+    Includes audible Joplin playback, transposed staff/maps/audio, specific theory,
+    mobile overflow, daily challenge opt-in/sharing and existing course/account flows.
+  - `git diff --check`: clean; `/docs` ignored and no tracked source documents.
+  - Dockerfile/lockfile reviewed: CI repeats all 26 unit tests, typecheck and build.
+    Container build delegated to the existing CI gate before image update.
+  - Static RBAC review: no infrastructure, identity, permission or SQL changes.
+  - `az containerapp show`: Brazil South, identity None; existing SQL secret name
+    retained, values not accessed. Deployment ServicePrincipal Contributor role
+    verified at existing resource-group scope with `az role assignment list`.
+  - Workflow updates ONLY image via OIDC. No Bicep deployment, migrations, new
+    resources, scale/tier, budget or policy changes. Template compilation, what-if,
+    provisioning quotas and ACR identity propagation are N/A for this release.
+
+Scope: 31 scale and 16 arpeggio families in all pitch classes with enharmonic
+spellings, independent teaching notes and tonic-specific examples, optional local
+daily challenge and share link, full original MIDI piano listening separate from
+bass reduction. Existing licenses/assets retained. Avatar/concert gamification is
+discussion only, not part of this publication. Exclude unrelated tsconfig.tsbuildinfo.
 
 ## 7. Validation Proof — course journey and inline reading, 2026-10-07
 

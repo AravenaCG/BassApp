@@ -1,6 +1,6 @@
 # Appbass
 
-Beta de aprendizaje de bajo y contrabajo de cuatro cuerdas (Mi–La–Re–Sol): 40 lecciones, atlas de 46 escalas y arpegios, y prácticas interactivas.
+Beta de aprendizaje de bajo y contrabajo de cuatro cuerdas (Mi–La–Re–Sol): 40 lecciones, atlas de 31 familias de escalas y 16 de arpegios, y prácticas interactivas.
 
 ## Aplicación
 
@@ -29,6 +29,17 @@ Esquema inicial: infra/appbass-beta.sql. Ampliación aditiva/repetible: infra/ap
 
 ## Desarrollo y pruebas
 
+Cada ficha del atlas explica su construcción, fórmula, intervalos, notas características y una aplicación al bajo. Los ejemplos y la tabla grado por grado se recalculan con la tónica elegida; los detalles desplegables mantienen separada la teoría de la práctica.
+
+Atlas interactivo: 31 familias de escalas y 16 de arpegios, con todas las 12 alturas
+y grafías enarmónicas opcionales. Selector de tónica, búsqueda por nombre latino o
+cifrado, partitura/mapa/audio generados con las mismas alturas y grados. El cifrado
+de una escala indica un acorde de referencia, no la escala completa. El PDF permanece
+como material original estático. El desafío diario es opt-in, local por cuenta, sin
+notificaciones ni puntos: tres colores sobre una tónica, autoevaluación y enlace
+compartible con fecha fija. Escuchar tema en Joplin inicia el MIDI original con piano;
+Practicar reducción carga el bajo didáctico y espera el botón Reproducir. No son grabaciones.
+
 Mi curso separa el recorrido de 40 lecciones (mapa o lista) del laboratorio
 complementario de 16 unidades. La nota del mapa señala la primera lección pendiente
 del nivel visible y se mueve con el progreso guardado en la cuenta; no bloquea otras
@@ -39,7 +50,7 @@ Node >=22.13 y pnpm (Corepack).
 
 ```sh
 corepack pnpm install --frozen-lockfile
-node --test tests/study.test.mjs tests/repertoire.test.mjs tests/harmony.test.mjs tests/course-ui.test.mjs
+node --test tests/study.test.mjs tests/repertoire.test.mjs tests/harmony.test.mjs tests/course-ui.test.mjs tests/atlas.test.mjs
 corepack pnpm exec tsc --noEmit --incremental false
 corepack pnpm build:azure
 corepack pnpm start:azure

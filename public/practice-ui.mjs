@@ -19,7 +19,7 @@ export function mountPractice(host,{onLesson,onJournal}) {
       <button id="practice-play" class="primary" disabled>Reproducir</button><button id="practice-stop" class="secondary">Volver al inicio</button>
       <label>Tempo (BPM)<input id="practice-tempo" type="number" min="30" max="200" step="1" value="72"></label>
       <label>Volumen<input id="practice-volume" type="range" min="0" max="100" value="60"></label>
-      <label>Escuchar<select id="practice-mix"><option value="full">Mezcla completa</option><option value="no-bass">Sin bajo · tocá vos</option><option value="bass-only">Sólo bajo</option></select></label>
+      <label>Escuchar<select id="practice-mix"><option value="full">Mezcla completa</option><option value="no-bass">Sin bajo · tocá vos</option><option value="bass-only">Sólo bajo</option><option value="original" hidden>Piano original · MIDI</option></select></label>
       <label class="check"><input type="checkbox" id="practice-guide" checked>Bajo guía</label>
       <label class="check"><input type="checkbox" id="practice-click" checked>Metrónomo</label>
       <label class="check"><input type="checkbox" id="practice-visual" checked>Notas que caen</label>
@@ -36,7 +36,7 @@ export function mountPractice(host,{onLesson,onJournal}) {
     <p class="practice-legend">Colores por función respecto del acorde: <span>● Fundamental</span> · <span>● Tercera</span> · <span>● Quinta</span> · <span>● Séptima</span> · <span>● Otras / sin armonía indicada</span></p>
     <details class="practice-settings" id="repertoire-library"><summary>Repertorio beta · partituras y fuentes</summary>
       <p>Seis obras históricas de jazz y ragtime. Las partituras son para piano, no partes originales de bajo. Los títulos de Morton abren fuentes externas y todavía no tienen audio sincronizado en Appbass.</p>
-      <div class="repertoire-grid">${activeRepertoire().map(r=>`<article data-collection="${r.collection}" data-repertoire-id="${r.id}"><span class="eyebrow">REPERTORIO BETA</span><h3>${esc(r.title)}</h3><p>${esc(r.composer)} · ${esc(r.edition)}</p><p>${esc(r.status)}</p><p>${esc(r.license)}</p><a href="${esc(r.source)}" target="_blank" rel="noopener noreferrer">Fuente y condiciones ↗</a>${r.pdf?` · <a href="${r.pdf}" target="_blank" rel="noopener">Partitura completa PDF</a><p><button class="secondary" data-play-repertoire="${r.id}">Practicar reducción de bajo</button></p>`:''}</article>`).join('')}</div>
+      <div class="repertoire-grid">${activeRepertoire().map(r=>`<article data-collection="${r.collection}" data-repertoire-id="${r.id}"><span class="eyebrow">REPERTORIO BETA</span><h3>${esc(r.title)}</h3><p>${esc(r.composer)} · ${esc(r.edition)}</p><p>${esc(r.status)}</p><p>${esc(r.license)}</p><a href="${esc(r.source)}" target="_blank" rel="noopener noreferrer">Fuente y condiciones ↗</a>${r.pdf?` · <a href="${r.pdf}" target="_blank" rel="noopener">Partitura completa PDF</a><div class="button-row"><button class="primary" data-listen-repertoire="${r.id}">Escuchar tema</button><button class="secondary" data-play-repertoire="${r.id}">Practicar reducción de bajo</button></div><p role="status" data-repertoire-status="${r.id}"></p>`:''}</article>`).join('')}</div>
       <p>Elegí las ediciones históricas señaladas, no cualquier arreglo moderno de la misma página. Dominio público no equivale a ausencia de obligaciones en todos los países; en Argentina puede aplicar el dominio público pagante.</p>
       <p><a href="repertoire/README.md" target="_blank" rel="noopener">Procedencia, licencias y límites</a> · <a href="repertoire/asset-manifest.json" target="_blank" rel="noopener">Manifiesto verificable de archivos</a></p>
     </details>`;
@@ -69,9 +69,11 @@ export function mountPractice(host,{onLesson,onJournal}) {
         const xml=await fetch(base+asset.relativePath);if(!xml.ok)throw Error();
         next=parseScore(await xml.text());
       }
-      if(run!==loadRun)return;
+      if(run!==loadRun)return false;
       if(!next.notes.length)throw Error();
       score=next;engine.load(score);
+      $('#practice-mix option[value="original"]').hidden=!item.midi;
+      if(!item.midi&&engine.mix==='original')setMix('full');
       $('#exercise-title').textContent=item.title;$('#exercise-goal').textContent=item.goal;
       $('#practice-source').innerHTML=item.midi?`Repertorio beta · ${esc(item.edition)}. Reducción automática: los graves se adaptan al registro del bajo; el resto del piano forma el acompañamiento. Sin cifrado inferido. Tempo fijo de estudio. <a href="${item.pdf}" target="_blank" rel="noopener">Ver partitura original completa</a>`:item.group==='backing'?'Acompañamiento original de Appbass con samples CC0 de Versilian Studios. No contiene pistas ni datos de iReal Pro.':'';
       $('#practice-description').textContent=`${labels[item.level]} · ${item.minutes} min sugeridos · ${score.bars.length} compases${item.group==='songs'?' · Composición original de Appbass':''}`;
@@ -82,8 +84,8 @@ export function mountPractice(host,{onLesson,onJournal}) {
       $('#practice-bars').querySelectorAll('button').forEach(b=>b.onclick=()=>engine.seek(score.bars[Number(b.dataset.bar)].beat));
       $('#practice-lesson').hidden=!item.lesson;$('#practice-score').innerHTML=renderScore(score);
       $('#practice-play').disabled=false;$('#practice-status').textContent='Lista. Podés cambiar el tempo o elegir un fragmento.';
-      draw(0);save();
-    } catch {if(run===loadRun)$('#practice-status').textContent='No pudimos cargar esta práctica. Elegí otra o volvé a seleccionarla.';}
+      draw(0);save();return true;
+    } catch {if(run===loadRun)$('#practice-status').textContent='No pudimos cargar esta práctica. Elegí otra o volvé a seleccionarla.';return false;}
   }
   function draw(beat){
     if(!score)return;
@@ -116,8 +118,17 @@ export function mountPractice(host,{onLesson,onJournal}) {
   $('#practice-tempo').onchange=e=>{const v=Number(e.target.value);if(!Number.isFinite(v))return;e.target.value=Math.max(30,Math.min(200,v));engine.configure({tempo:Number(e.target.value)});save();};
   $('#practice-volume').oninput=e=>engine.configure({volume:Number(e.target.value)/100});
   $('#practice-guide').onchange=e=>engine.configure({guide:e.target.checked});
-  $('#practice-mix').onchange=e=>{const solo=e.target.value==='bass-only';$('#practice-guide').checked=true;$('#practice-guide').disabled=solo;engine.configure({mix:e.target.value,guide:true,...(solo?{metronome:false}:{})});if(solo)$('#practice-click').checked=false;};
-  host.querySelectorAll('[data-play-repertoire]').forEach(button=>button.onclick=()=>{$('#practice-level').value='';choices();void load(button.dataset.playRepertoire);$('#exercise-select').focus();});
+  function setMix(mode){const solo=mode==='bass-only',original=mode==='original';$('#practice-mix').value=mode;$('#practice-guide').checked=!original;$('#practice-guide').disabled=solo||original;$('#practice-click').disabled=original;if(solo||original)$('#practice-click').checked=false;engine.configure({mix:mode,guide:!original,metronome:$('#practice-click').checked});}
+  $('#practice-mix').onchange=e=>setMix(e.target.value);
+  host.querySelectorAll('[data-play-repertoire]').forEach(button=>button.onclick=async()=>{$('#practice-level').value='';choices();setMix('full');if(await load(button.dataset.playRepertoire)){$('[data-repertoire-status="'+button.dataset.playRepertoire+'"]').textContent='Reducción lista. Pulsá Reproducir en el reproductor.';$('#practice-play').focus();}});
+  host.querySelectorAll('[data-listen-repertoire]').forEach(button=>button.onclick=async()=>{
+    const id=button.dataset.listenRepertoire,status=$('[data-repertoire-status="'+id+'"]');status.textContent='Preparando escucha…';
+    try{await engine.unlock();$('#practice-level').value='';choices();if(!await load(id)){status.textContent='No se pudo cargar el tema. Volvé a intentar.';return;}
+      setMix('original');await toggle();
+      status.textContent=engine.playing?(engine.volume>0?'Sonando en el reproductor · piano MIDI. Podés pausar arriba.':'Reproducción iniciada, pero el volumen está en cero. Subilo en el reproductor.'):'No se pudo iniciar el audio. Pulsá Reproducir para reintentar.';
+      $('#practice-play').focus();
+    }catch{status.textContent='El navegador no pudo iniciar el audio. Volvé a pulsar Escuchar tema.';}
+  });
   $('#practice-click').onchange=e=>engine.configure({metronome:e.target.checked});
   $('#practice-visual').onchange=()=>draw(engine.position());
   $('#practice-loop').onchange=e=>engine.loop=e.target.checked;

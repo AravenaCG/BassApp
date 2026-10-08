@@ -30,6 +30,16 @@ test('mix modes independently schedule bass and accompaniment; solo has no backi
  }
  assert.equal(backingTracks.length,4);
 });
+test('original listening uses actual Joplin MIDI pitches and produces piano events from the beginning',()=>{
+ for(const entry of activeRepertoire().filter(r=>r.midi)){
+  const b=readFileSync(new URL('../public/'+entry.midi,import.meta.url)),score=parseMidi(b.buffer.slice(b.byteOffset,b.byteOffset+b.byteLength));
+  assert.ok(score.originalNotes.length>2400);assert.equal(score.originalNotes[0].beat,0);
+  const e=new PracticeEngine();e.score=score;e.mix='original';e.anchorBeat=0;e.anchorTime=0;e.end=score.totalBeats;
+  const events=[];e.tone=()=>assert.fail('Original piano should not add synthesized bass or clicks');e.sample=(...a)=>events.push(a);e.schedule();
+  assert.equal(events.length,score.originalNotes.length);assert.equal(events[0][1],score.originalNotes[0].midi);
+  assert.ok(events.every(e=>e[4]>0));
+ }
+});
 test('legacy VCSL C3 sample is rooted at middle C, not an octave above the requested note',()=>{
  const e=new PracticeEngine(),source={playbackRate:{},connect(){},start(){},stop(){}};
  e.buffers={'piano-c3':{}};e.context={createBufferSource:()=>source,createGain:()=>({gain:{setValueAtTime(){},exponentialRampToValueAtTime(){}},connect(){}})};

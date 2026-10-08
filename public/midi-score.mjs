@@ -42,6 +42,6 @@ export function parseMidi(buffer){
  }
  for(let i=0;i<notes.length-1;i++)notes[i].duration=Math.min(notes[i].duration,notes[i+1].beat-notes[i].beat);
  const totalBeats=Math.ceil(Math.max(...events.map(n=>n.beat+n.duration))/beatsPerBar)*beatsPerBar;
- return {tempo:Math.max(30,Math.min(200,Math.round(tempo))),beatsPerBar,totalBeats,notes,backing,
+ return {tempo:Math.max(30,Math.min(200,Math.round(tempo))),beatsPerBar,totalBeats,notes,backing,originalNotes:events,
   bars:Array.from({length:totalBeats/beatsPerBar},(_,i)=>({beat:i*beatsPerBar,length:beatsPerBar,chord:'',root:null,quality:''}))};
 }

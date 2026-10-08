@@ -96,6 +96,7 @@ export class PracticeEngine {
   constructor(onFrame=()=>{},onEnd=()=>{}) {this.onFrame=onFrame;this.onEnd=onEnd;this.nodes=new Set();this.playing=false;this.beat=0;this.guide=true;this.mix='full';this.metronome=true;this.loop=false;this.increment=0;this.tempo=72;this.volume=.6;}
   load(score){this.stop();this.score=score;this.tempo=score.tempo;this.start=0;this.end=score.totalBeats;this.beat=0;}
   position(){return this.playing?this.anchorBeat+(this.context.currentTime-this.anchorTime)*this.tempo/60:this.beat;}
+  async unlock(){this.context??=new (window.AudioContext||window.webkitAudioContext)();await this.context.resume();}
   async play(){
     if(!this.score||this.playing)return;
     this.context??=new (window.AudioContext||window.webkitAudioContext)();
@@ -144,6 +145,10 @@ export class PracticeEngine {
   }
   schedule(){
     const from=this.anchorBeat,until=this.end,s=60/this.tempo;
+    if(this.mix==='original'&&this.score.originalNotes){
+      for(const n of this.score.originalNotes)if(n.beat>=from&&n.beat<until)this.sample('piano-c3',n.midi,this.anchorTime+(n.beat-from)*s,Math.min(n.duration,until-n.beat)*s,.06*PRACTICE_MUSIC_BOOST*(n.velocity??.7));
+      return;
+    }
     if(this.guide&&this.mix!=='no-bass')for(const n of this.score.notes)if(n.beat>=from&&n.beat<until)
       this.tone(n.midi,this.anchorTime+(n.beat-from)*s,Math.min(n.duration,until-n.beat)*s*.85,.13*PRACTICE_MUSIC_BOOST);
     if(this.mix!=='bass-only'){
