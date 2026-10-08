@@ -1,6 +1,6 @@
 # Appbass — deployment plan
 
-Status: Validated — first concert tour and configurable avatar; azure-validate, image-only release.
+Status: Deployed and verified — first concert tour and configurable avatar; azure-validate / azure-deploy, image-only release.
 Updated: 2026-10-07.
 
 ## 7. Validation Proof — first tour and avatar, 2026-10-07 Argentina
@@ -35,6 +35,18 @@ Existing SQL lesson IDs/completion/points remain untouched. Animation honors
 reduced motion and waits until the new progress is saved and the map is visible.
 Concluding concerts/rewards are clearly labelled Coming soon and not enabled.
 No additional services or billing configuration changes. Exclude tsconfig.tsbuildinfo.
+
+Publication verified 2026-10-08 01:54 UTC (2026-10-07 Argentina):
+- Code/image commit 15d10416466447167b8ba197f9f80504ebccd4e3.
+- GitHub Actions run 37714911426 succeeded; deploy job 1m56s, Docker validation passed.
+- appbass--0000016 Healthy and latest ready revision; receives 100% of latest traffic.
+- Public endpoint browser suite: 21/21 passed (1.2m), including mobile avatar/profile,
+  venue coverage, appearance/account isolation and travel after successful mocked
+  saves. APIs mocked: no registration, production user changes or SQL writes.
+- Separate real anonymous /api/auth/me: HTTP 200.
+- Existing SQL secret name and identity None retained; ServicePrincipal Contributor
+  verified again after deployment. No infrastructure or database changes.
+- Endpoint: https://appbass.whiteground-636d0547.brazilsouth.azurecontainerapps.io/appbass.html#curso
 
 ## 7. Validation Proof — atlas, theory and listening, 2026-10-07
 
