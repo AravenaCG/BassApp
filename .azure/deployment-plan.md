@@ -1,6 +1,6 @@
 # Appbass — deployment plan
 
-Status: Validated — transposable atlas, scale theory and repertoire listening; azure-validate, image-only release.
+Status: Deployed and verified — transposable atlas, scale theory and repertoire listening; azure-validate / azure-deploy, image-only release.
 Updated: 2026-10-07.
 
 ## 7. Validation Proof — atlas, theory and listening, 2026-10-07
@@ -33,6 +33,20 @@ spellings, independent teaching notes and tonic-specific examples, optional loca
 daily challenge and share link, full original MIDI piano listening separate from
 bass reduction. Existing licenses/assets retained. Avatar/concert gamification is
 discussion only, not part of this publication. Exclude unrelated tsconfig.tsbuildinfo.
+
+Publication verified 2026-10-08 01:19 UTC (2026-10-07 Argentina):
+- Code/image commit: 616998e259532ce235bc28cfa8700f84c893b1c1.
+- GitHub Actions run 37712061507 succeeded; deploy job 1m47s, including Docker
+  unit tests, typecheck and build before the image-only update.
+- appbass--0000015 Healthy / Provisioned and latest ready revision; latest receives
+  100% of traffic. Initial readiness lag resolved without configuration changes.
+- Public endpoint browser suite: 19/19 passed (44.7s); original MIDI audio,
+  transposition, theory, daily challenge, course and account UI verified with API
+  mocks. No production SQL writes or registration performed.
+- Separate real anonymous /api/auth/me: HTTP 200.
+- Identity None, existing SQL secret name retained; deployment ServicePrincipal
+  Contributor confirmed after publication. No resources, permissions or SQL changes.
+- Endpoint: https://appbass.whiteground-636d0547.brazilsouth.azurecontainerapps.io/appbass.html#escalas
 
 ## 7. Validation Proof — course journey and inline reading, 2026-10-07
 
