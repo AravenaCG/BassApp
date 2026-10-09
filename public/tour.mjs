@@ -1,3 +1,4 @@
+import {learningStore} from './learning-store.mjs';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const stops=[
  ['Tocar en tu cuarto','Tu primera audiencia: la almohada.','home'],
@@ -46,7 +47,7 @@ export function tourStop(id){return TOUR_STOPS.find(s=>s.lessonId===id)||{name:'
 export const AVATAR_COLORS={cyan:'#48e3ed',violet:'#bda5ff',coral:'#ff9d9d',gold:'#ffd779'};
 export function tourPreferences(value={}){return {character:value?.character==='woman'?'woman':'man',color:Object.hasOwn(AVATAR_COLORS,value?.color)?value.color:'cyan',motion:value?.motion!==false};}
 export function tourKey(user){return 'appbass-tour-look-v1-'+(user?.id||'guest');}
-export function readTourPreferences(user,storage){try{return tourPreferences(JSON.parse(storage.getItem(tourKey(user))||'{}'));}catch{return tourPreferences();}}
+export function readTourPreferences(user,storage){if(user?.id===learningStore.user?.id&&learningStore.ready&&learningStore.preference('avatar'))return tourPreferences(learningStore.preference('avatar'));try{return tourPreferences(JSON.parse(storage.getItem(tourKey(user))||'{}'));}catch{return tourPreferences();}}
 export function writeTourPreferences(user,value,storage){try{storage.setItem(tourKey(user),JSON.stringify(tourPreferences(value)));return true;}catch{return false;}}
 export function avatarSVG(value={},instrument='electricBass'){
  const p=tourPreferences(value),color=AVATAR_COLORS[p.color],woman=p.character==='woman';
@@ -63,5 +64,11 @@ export function mountTourPreferences(host,{user=null,instrument='electricBass',o
  function save(){let saved=false;try{saved=writeTourPreferences(user,p,localStorage);}catch{}reflect();host.querySelector('[data-tour-status]').textContent=saved?'Apariencia guardada en este navegador.':'No se pudo guardar la apariencia; se usará durante esta visita.';onChange(p);document.dispatchEvent(new CustomEvent('tour-look-change',{detail:{key:tourKey(user),preferences:p}}));}
  host.querySelectorAll('[data-tour-character]').forEach(b=>b.onclick=()=>{p.character=b.dataset.tourCharacter;save();});
  host.querySelector('[data-tour-color]').onchange=e=>{p.color=e.target.value;save();};host.querySelector('[data-tour-motion]').onchange=e=>{p.motion=e.target.checked;save();};reflect();
+ const status=host.querySelector('[data-tour-status]');
+ if(user)host.querySelector('.footnote').textContent='Con sesión iniciada, la apariencia se guarda en tu cuenta. No modifica el avance del curso.';
+ host._tourUnsubscribe?.();host._tourUnsubscribe=learningStore.subscribe(()=>{if(user?.id===learningStore.user?.id&&learningStore.ready){p=tourPreferences(learningStore.preference('avatar'));reflect();document.dispatchEvent(new CustomEvent('tour-look-change',{detail:{key:tourKey(user),preferences:p}}));}});
+ host.onclick=e=>{if(user&&e.target.closest('[data-tour-character]'))cloudSave();};
+ host.querySelector('[data-tour-color]').addEventListener('change',cloudSave);host.querySelector('[data-tour-motion]').addEventListener('change',cloudSave);
+ function cloudSave(){if(!user||user.id!==learningStore.user?.id)return;status.textContent='Guardando apariencia en tu cuenta…';learningStore.setPreference('avatar',{...p}).then(()=>status.textContent='Apariencia guardada en tu cuenta.').catch(e=>status.textContent='No se pudo guardar en la nube: '+e.message);}
  return {refresh(value){p=tourPreferences(value);reflect();}};
 }

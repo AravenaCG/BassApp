@@ -1,4 +1,5 @@
 import {harmonyModules,harmonyUnits,unitsForLesson,nextHarmonyUnit,HARMONY_VERSION} from './harmony-curriculum.mjs';
+import {learningStore} from './learning-store.mjs';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const list=items=>`<ul>${items.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>`;
 const examples=u=>u.examples.map(e=>`<figure class="harmony-example"><figcaption>${esc(e.label)}</figcaption><ul>${e.notes.map(n=>`<li>${esc(n)}</li>`).join('')}</ul><p>${esc(e.why)}</p></figure>`).join('');
@@ -34,7 +35,7 @@ export function mountHarmony({onLesson,onPractice,onShow=()=>{},onStopOtherAudio
  const stylesheet=document.createElement('link');stylesheet.rel='stylesheet';stylesheet.href='harmony.css?v=1';document.head.append(stylesheet);
  const host=document.createElement('section');host.className='harmony-course';host.setAttribute('aria-label','Ruta de armonía para bajistas');
  document.querySelector('#course-harmony').append(host);
- let key='appbass-harmony-v1-guest',done=[],current=harmonyUnits[0],storageWarning='',quizAnswers={};
+ let key='appbass-harmony-v1-guest',signedUser=null,done=[],current=harmonyUnits[0],storageWarning='',quizAnswers={};
  const audio=new HarmonyAudio();
  function save(){try{localStorage.setItem(key,JSON.stringify({version:HARMONY_VERSION,done,last:current.id}));storageWarning='';}catch{storageWarning='El navegador no permite guardar el repaso. Podés seguir estudiando, pero estos cambios no persistirán.';}}
  function load(user){
@@ -62,6 +63,7 @@ export function mountHarmony({onLesson,onPractice,onShow=()=>{},onStopOtherAudio
    <footer><h4>Conectá con las lecciones del curso</h4><div class="button-row">${current.lessons.map(id=>`<button class="secondary" data-harmony-lesson="${id}">Abrir ${id}</button>`).join('')}</div><p>Las lecciones conservan sus audios, partituras y progreso. Sus PDF anteriores no incluyen esta ampliación web.</p><div class="button-row">${index?`<button class="secondary" data-harmony-go="${harmonyUnits[index-1].id}">← Unidad anterior</button>`:''}${index<harmonyUnits.length-1?`<button class="secondary" data-harmony-go="${harmonyUnits[index+1].id}">Unidad siguiente →</button>`:''}</div></footer></article>
    `;
   host.querySelectorAll('[data-harmony-go]').forEach(b=>b.onclick=()=>open(b.dataset.harmonyGo));
+  if(signedUser)host.querySelector('header .footnote').textContent=learningStore.ready?'Los repasos se guardan en tu cuenta. Son independientes del progreso y los puntos de las 40 lecciones; no certifican la ejecución instrumental.':'Cargando la sincronización de tu cuenta. Los datos locales no se importan automáticamente; no se concede progreso nuevo hasta confirmar un guardado.';
   host.querySelector('#harmony-course-list').onclick=()=>{audio.stop();document.querySelector('[data-course-space="journey"]').click();const target=document.querySelector('#course-journey');target.tabIndex=-1;target.focus();target.scrollIntoView({block:'start'});};
   host.querySelectorAll('[data-harmony-lesson]').forEach(b=>b.onclick=()=>{audio.stop();onLesson(b.dataset.harmonyLesson);});
   const check=()=>{host.querySelector('#harmony-complete').disabled=!(current.questions.every((q,i)=>quizAnswers[i]===q.answer)&&host.querySelector('#harmony-played').checked);};
@@ -71,8 +73,8 @@ export function mountHarmony({onLesson,onPractice,onShow=()=>{},onStopOtherAudio
    field.querySelector('[role=status]').textContent=(choice===q.answer?'Correcto. ':'Revisemos: ')+q.explanation;check();
   }));
   host.querySelector('#harmony-played').onchange=check;
-  host.querySelector('#harmony-complete').onclick=()=>{if(host.querySelector('#harmony-complete').disabled)return;done=[...new Set([...done,current.id])];save();render();host.querySelector('#harmony-title').focus();};
-  host.querySelector('#harmony-review').onclick=()=>{done=done.filter(id=>id!==current.id);save();render();host.querySelector('#harmony-title').focus();};
+  host.querySelector('#harmony-complete').onclick=()=>updateUnit(true);
+  host.querySelector('#harmony-review').onclick=()=>updateUnit(false);
   host.querySelector('#harmony-listen').onclick=async()=>{
    const status=host.querySelector('#harmony-audio-status');onStopOtherAudio();status.textContent='Reproduciendo ejemplo…';
    try{const playing=await audio.play(current,()=>{status.textContent='Audio detenido. Cantá el ejemplo y comprobalo en tu instrumento.';});if(playing)status.textContent='Reproduciendo ejemplo…';}catch{status.textContent='No se pudo iniciar el audio. Volvé a pulsar Escuchar o usá las notas del ejemplo escrito.';}
@@ -84,10 +86,13 @@ export function mountHarmony({onLesson,onPractice,onShow=()=>{},onStopOtherAudio
   const next=harmonyUnits.find(u=>u.id===id);if(!next)return;
   current=next;onShow();save();render();if(updateHash)location.hash='curso?unidad='+id;
   host.querySelector('#harmony-title').focus();host.querySelector('.harmony-reader').scrollIntoView({block:'start'});
+  if(signedUser&&learningStore.ready)learningStore.setPreference('harmony',{last:current.id}).catch(e=>host.querySelector('#harmony-check-status').textContent='Última unidad no guardada en la nube: '+e.message);
  }
+ async function updateUnit(reviewed){if(reviewed&&host.querySelector('#harmony-complete').disabled)return;const id=current.id,account=signedUser?.id;host.querySelector('#harmony-complete').disabled=true;try{if(account){host.querySelector('#harmony-check-status').textContent='Guardando repaso en tu cuenta…';await learningStore.unit(id,reviewed);if(signedUser?.id!==account)return;}done=reviewed?[...new Set([...done,id])]:done.filter(n=>n!==id);save();render();host.querySelector('#harmony-title').focus();}catch(e){host.querySelector('#harmony-check-status').textContent='No se guardó en la nube: '+e.message;host.querySelector('#harmony-complete').disabled=false;}}
+ learningStore.subscribe(d=>{if(!signedUser||signedUser.id!==learningStore.user?.id)return;if(learningStore.ready){done=Object.entries(d.units).filter(([,v])=>v.reviewed).map(([id])=>id);const id=new URLSearchParams(location.hash.split('?')[1]||'').get('unidad')||learningStore.preference('harmony')?.last;current=harmonyUnits.find(u=>u.id===id)||nextHarmonyUnit(done)||harmonyUnits[0];storageWarning='Repaso cargado desde tu cuenta.';render();host.querySelector('header .footnote').textContent='Los repasos se guardan en tu cuenta. Son independientes del progreso y los puntos de las 40 lecciones; no certifican la ejecución instrumental.';}else{storageWarning=learningStore.error||'Sincronización no disponible.';render();}});
  function fromHash(){const query=new URLSearchParams(location.hash.split('?')[1]||''),id=query.get('unidad');if(location.hash.startsWith('#curso')&&harmonyUnits.some(u=>u.id===id)){onShow();if(id!==current.id)open(id,false);}else if(location.hash.startsWith('#curso')&&query.get('espacio')==='armonia')onShow();else if(!location.hash.startsWith('#curso'))audio.stop();}
  window.addEventListener('hashchange',fromHash);
  document.addEventListener('visibilitychange',()=>{if(document.hidden)audio.stop();});
  load(null);fromHash();
- return {open,stop:()=>audio.stop(),setUser(user){audio.stop();load(user);fromHash();}};
+ return {open,stop:()=>audio.stop(),setUser(user){signedUser=user;audio.stop();load(user);fromHash();}};
 }

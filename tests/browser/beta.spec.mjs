@@ -41,11 +41,11 @@ test('all harmony units are reachable on mobile and linked lesson theory is expa
  await page.locator('[data-harmony-open="H04"]').click();await expect(page.locator('#detail-dialog')).toBeHidden();
  await expect(page.locator('#harmony-title')).toHaveText(harmonyUnits[3].title);
 });
-test('harmony malformed storage and blocked persistence do not prevent learning',async({page})=>{
- await mocks(page,true);await page.addInitScript(()=>{
-  localStorage.setItem('appbass-harmony-v1-test-person','{"version":1,"done":["unknown",null,"H01","H01"],"last":"bad"}');
+test('guest harmony malformed storage and blocked persistence do not prevent learning',async({page})=>{
+ await mocks(page,false);await page.addInitScript(()=>{
+  localStorage.setItem('appbass-harmony-v1-guest','{"version":1,"done":["unknown",null,"H01","H01"],"last":"bad"}');
  });
- await page.goto('/appbass.html#curso?espacio=armonia');await expect(page.locator('#profile-button')).toBeVisible();
+ await page.goto('/appbass.html#curso?espacio=armonia');await expect(page.locator('#open-login')).toBeVisible();
  await expect(page.locator('#harmony-progress')).toContainText('1 de 16');
  await expect(page.locator('#harmony-title')).toHaveText(harmonyUnits[1].title);
  await page.evaluate(()=>{Storage.prototype.setItem=function(){throw Error('storage unavailable');};});
@@ -129,7 +129,7 @@ test('repertoire sources, MIDI reduction, CC0 playback and solo controls work on
 });
 async function mocks(page,authenticated=false,showTour=false){
  if(!showTour)await page.addInitScript(()=>localStorage.setItem('appbass-tour-v1-test-person','seen'));
- let logged=authenticated;
+ let logged=authenticated;const learning={preferences:{},reviews:{},units:{},daily:[]};
  await page.route('**/api/**',async route=>{
   const path=new URL(route.request().url()).pathname;
   let body={ok:true};
@@ -138,6 +138,7 @@ async function mocks(page,authenticated=false,showTour=false){
   if(path==='/api/auth/logout')logged=false;
   if(path==='/api/progress')body={completed:['B01'],totalPoints:100,states:{B03:'review'},nextLessonId:'B02',awardedPoints:100};
   if(path==='/api/activity')body={entries:[],weeklyMinutes:15};
+  if(path==='/api/learning'){body=learning;if(route.request().method()==='POST'){const b=route.request().postDataJSON();if(b.kind==='unit')learning.units[b.unitId]={reviewed:b.reviewed,version:(learning.units[b.unitId]?.version||0)+1};if(b.kind==='preference')learning.preferences[b.section]={value:b.value,version:(learning.preferences[b.section]?.version||0)+1};body={ok:true,version:1};}}
   await route.fulfill({json:body});
  });
 }

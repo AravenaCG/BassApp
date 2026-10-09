@@ -1,7 +1,178 @@
 # Appbass — deployment plan
 
-Status: Deployed and verified — first concert tour and configurable avatar; azure-validate / azure-deploy, image-only release.
-Updated: 2026-10-07.
+Status: Validated — image-only publication authorized; mandatory Linux Docker gate runs in existing GitHub CI before Azure update.
+Updated: 2026-10-09.
+
+## Publication validation — 2026-10-09
+
+User explicitly requested commit, push and deploy. azure-validate re-ran all 36
+unit tests (passed), TypeScript without incremental output (exit 0), and the final
+Azure production build (exit 0). Git diff check passed; remote main matches HEAD.
+Azure CLI authentication confirms subscription d8a9c4b4-89a1-482d-88dd-ac38d3d289a1;
+existing appbass is in Brazil South / rg-appbass-prod, identity None, previous
+ready revision appbass--0000016. Docker context excludes docs, credentials and
+local outputs; frozen pnpm lockfile is present. No infrastructure or RBAC edits.
+Template compilation, what-if, provisioning quotas and new-role checks are N/A
+for this image-only release. Linux Docker validation is delegated to the existing
+mandatory GitHub build step, which runs tests, types and build before Azure login
+and image update; it is not claimed as completed locally. Prior 26/26 local browser
+checks are recorded below. No SQL migration or SQL write is part of publication.
+Historical Ready for Validation notes below describe the earlier handoff.
+
+## Current plan — beta learning persistence
+
+### 1. Project overview
+
+Mode MODIFY. Extend the existing beta database and authenticated API so learning
+reviews and preferences can persist across devices. Keep the existing Node app,
+SQL database, lesson completion, authentication and CI/CD. No new Azure resources.
+
+### 2. Requirements and context for approval
+
+- Customer-facing beta, maximum 20 accounts; cost-optimized existing service tiers.
+- Subscription verified read-only: Suscripción de Azure 1,
+  d8a9c4b4-89a1-482d-88dd-ac38d3d289a1, previously selected personal account.
+- ONLY SQL database AppbassBeta on sqldb-orquestaoesat.database.windows.net.
+- Existing SQL region East US / resource group oesatgroup, as recorded below;
+  no database move. Container App remains Brazil South / rg-appbass-prod.
+- NEVER connect to, inspect users in, migrate, update or delete UsuariosOESAT.
+- No server-wide login, firewall, permission, pricing-tier or budget changes.
+- Reconfirm this unchanged target as part of plan approval before execution.
+- Existing USD20 budget on rg-appbass-prod does not cover SQL in oesatgroup.
+  This plan does not claim to change that budget or guarantee a new cost total.
+
+### 3. Components detected
+
+- Static ES-module UI: public/app.js, learning-tools.mjs, atlas-ui.mjs,
+  practice-ui.mjs, harmony-ui.mjs and tour.mjs.
+- Authenticated Next-compatible API routes: app/api; mssql connection helper
+  lib/azure-sql.ts and session authorization in lib/beta-auth.ts.
+- Existing additive SQL migrations in infra; scripts/beta-db.mjs already verifies
+  DB_NAME(). scripts/with-beta-sql.ps1 handles the existing secret only in memory.
+- The general API pool currently has no database-name guard: harden it first.
+
+### 4. Recipe
+
+Existing Azure CLI / GitHub Actions image-only recipe, not a new azd project.
+Prepare a versioned, additive SQL migration and API/UI changes. No Bicep apply.
+No deployment or production migration is included without plan approval; publication
+will subsequently require azure-validate and azure-deploy under the approved scope.
+
+### 5. Architecture and first implementation scope
+
+Reuse Container Apps Consumption and existing Azure SQL Basic. Reuse existing
+logging, secret and authentication arrangements; do not provision supporting services
+or alter managed identities/RBAC in this change.
+
+Proposed additional tables (all with beta_ prefix and user_id ownership):
+- beta_learning_preferences: validated settings for practice (including five strings),
+  atlas, avatar and session duration; versioned updates to handle multiple devices.
+- beta_learning_reviews: next review per actual lesson and latest self-evaluation.
+- beta_learning_review_history: dated tempo/self-evaluation history, bounded in API.
+- beta_learning_unit_progress: locally reviewed harmony units moved to account storage.
+- beta_learning_daily_progress: opt-in daily challenge self-evaluations by date.
+
+Keep existing course completion/points and journal as their source of truth. Do not
+award extra points for self-evaluation, duplicate progress or claim to verify playing.
+Timer state, current ear-training questions and audio recordings remain browser-local;
+no audio upload, email sending, concert/reward system or paid service is added.
+
+Security: force target database before connecting where possible and verify DB_NAME()
+on the connected pool before any beta query. Reject any mismatch and close the pool.
+Every migration independently fails unless DB_NAME()='AppbassBeta'; transactional,
+repeatable, additive DDL only. No DROP, TRUNCATE, cross-database names or data cleanup.
+Every API operation derives user_id from the session, not from client-supplied IDs;
+parameterized SQL, strict field/lesson validation, bounded inputs and conflict handling.
+Schema errors return actionable failures; do not silently claim a cloud save succeeded.
+
+Local migration: offer an explicit import of the signed-in account's local preferences
+and progress after preview. Do not automatically upload guest or another account's data,
+overwrite newer cloud records, or delete local copies. Guests retain local exploration.
+UI labels must accurately distinguish local, pending, saved and failed states.
+
+### 6. Provisioning limit checklist
+
+New ARM resources: zero. Microsoft.App, Microsoft.Sql and all supporting resource
+types: number to deploy 0; existing resources unchanged; provisioning quotas/capacity
+N/A. No region, SKU, network, policy, RBAC or infrastructure changes requested.
+
+### 7. Execution checklist
+
+- [x] Analyze existing workspace and authenticated APIs; select MODIFY recipe.
+- [x] Confirm actual active subscription read-only; record prior region/resource scope.
+- [x] Inventory new resources: none; provisioning checks N/A.
+- [x] User approves plan and unchanged subscription/database/locations (2026-10-09), conditional on absolutely no orchestra changes.
+- [x] Load component/security references; implement guarded API connection.
+- [x] Create and review additive migration, then apply only to AppbassBeta.
+- [x] Implement validated authenticated storage, account isolation and conflict handling.
+- [x] Integrate cloud loading/saving with truthful UI and explicit local import.
+- [x] Test wrong-database refusal, migration repeatability, anonymous HTTP rejection,
+  account isolation, parallel client write queues, stale SQL versions, blocked storage
+  and save failures. Cross-connection SQL stress testing not claimed.
+- [x] Validate unit tests, types, build and desktop/mobile browser flows.
+- [x] Record actual migration verification; never label a local mock as real SQL proof.
+- [x] Mark Ready for Validation; invoke azure-validate. Local checks passed;
+  Linux Docker build remains gated in GitHub CI before any authorized publication.
+
+### 8. Files to prepare after approval
+
+Versioned SQL migration in infra, guarded helper in lib, authenticated routes in
+app/api, learning persistence adapter and relevant public UI modules, migration/test
+scripts and documentation. Preserve existing credentials and unrelated user changes.
+
+### 9. Current status and rollback
+
+Approved for additive changes exclusively in AppbassBeta. No publication requested.
+Research: azure-prepare SQL SDK/auth, security, Node runtime and AZCLI references read.
+Existing credentials are reused without changing server authentication, roles or network;
+switching shared server authentication would violate the user's explicit exclusion.
+Implementation completed locally, including guided maps, five strings and workshop.
+36 unit tests, TypeScript and final production build pass. Browser coverage includes
+real anonymous endpoint rejection and mocked cloud-save/reload/error/import flows.
+The database migration is applied, but the new API/UI is not yet published.
+
+### 7. Validation Proof — AppbassBeta learning storage, 2026-10-09
+
+- `scripts/with-beta-sql.ps1 -Action learning-migrate`: real Azure SQL migration
+  succeeded, all five new tables verified, second run succeeded. Only AppbassBeta
+  targeted; additive field on the new daily table, no existing-user schema/data changes.
+- `scripts/with-beta-sql.ps1 -Action learning-integration`: real SQL service tests
+  passed twice, including latest exact-server guard. Fixtures were uncommitted within
+  one transaction, fully rolled back; post-rollback fixture count zero. No real students
+  changed. Verifies per-account isolation, stale version rejection, duplicate event
+  suppression and reversible unit/daily self-evaluation. No orchestra connection/query.
+- `node --test tests/study.test.mjs tests/repertoire.test.mjs tests/harmony.test.mjs
+  tests/course-ui.test.mjs tests/atlas.test.mjs tests/learning.test.mjs tests/learning-db.test.mjs`:
+  36/36 passed. Includes refusal before connection, pool mismatch cleanup, session
+  cancellation, parallel client write queue/version merge and explicit account-only import.
+- `corepack pnpm exec tsc --noEmit --incremental false`: exit 0.
+- `corepack pnpm build:azure`: final package exit 0; learning-store and help modules
+  match source by SHA256. Node runtime tested locally; no credentials included.
+- `APPBASS_TEST_URL=http://127.0.0.1:3105 corepack pnpm exec playwright test`:
+  final package 26/26 passed (42.9s). Authenticated UI uses mocked APIs, not live SQL;
+  real anonymous /api/learning GET/POST return 401 with no-store, without SQL access.
+  Separate real SQL service tests above. No automated execution grading.
+- `git diff --check`: clean. `git ls-files docs`: empty; Docker excludes private docs,
+  secrets, local outputs and tsbuildinfo. Unrelated tsconfig.tsbuildinfo preserved.
+- `az account show --query '{name:name,id:id}' -o json`: approved subscription matches.
+  `az version -o json`: Azure CLI 2.87.0. No subscription, role or resource updates.
+- Static review of deployment workflow: GitHub builds image/tests and updates ONLY
+  Container App image via OIDC. Existing secrets retained. No Bicep or migration in CI.
+  Existing infra/identity/RBAC unchanged; no new service-to-identity relationships.
+- Provisioning quotas, ARM template validation/what-if and provisioning-policy checks
+  N/A: zero resources, no template/role/network/SKU changes in this release.
+- Docker executable is unavailable locally. Final Linux container build is pending
+  the existing GitHub CI gate when publication is authorized. Do not mark this release
+  Deployed or claim that browser mock tests prove live authenticated API integration.
+
+azure-validate reviewed the approved plan and AZCLI recipe, current CLI context,
+static unchanged role/identity declarations, Dockerfile/lockfile/context and existing
+CI image-only gate. Re-ran guard/storage unit tests (5/5), types and diff checks after
+the Ready for Validation handoff. Full status remains Ready for Validation rather than
+Validated: Docker gate is pending; no deployment, commit or push was authorized or run.
+
+Rollback: use previous app image while leaving additive tables/data intact. Do not
+drop tables or reset students' records. Earlier deployment evidence follows unchanged.
 
 ## 7. Validation Proof — first tour and avatar, 2026-10-07 Argentina
 

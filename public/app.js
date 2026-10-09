@@ -6,6 +6,8 @@ import {mountHarmony,lessonHarmonyHTML} from './harmony-ui.mjs';
 import {unitsForLesson} from './harmony-curriculum.mjs';
 import {mountCourseSpaces,readingExercisesHTML} from './course-ui.mjs';
 import {tourStop} from './tour.mjs';
+import {mountLearningTools} from './learning-tools.mjs';
+import {learningStore} from './learning-store.mjs';
 import {mountAtlas} from './atlas-ui.mjs';
 'use strict';
 const $ = (s, root = document) => root.querySelector(s);
@@ -40,8 +42,10 @@ document.addEventListener('course-space-change',()=>harmony.stop());
 function syncCourseSpace(){if(!location.hash.startsWith('#curso'))return;const query=new URLSearchParams(location.hash.split('?')[1]||'');courseSpaces.show(query.get('espacio')==='armonia'||/^H(0[1-9]|1[0-6])$/.test(query.get('unidad')||'')?'harmony':'journey');}
 window.addEventListener('hashchange',syncCourseSpace);syncCourseSpace();
 const scaleAtlas=mountAtlas({stopOtherAudio(){practice.stop();harmony.stop();}});
+const learningTools=mountLearningTools({stopOtherAudio(){practice.stop();harmony.stop();scaleAtlas.stop();},async onPractice(id){learningTools.stop();await practice.selectExercise(id);location.hash='practicar';navigate();workspace.scrollIntoView({block:'start'});},onLesson:openLesson});
+workspace.addEventListener('click',e=>{if(e.target.closest('#practice-play, [data-listen-repertoire]'))learningTools.stop();});
 const account=mountAccount({
-  async onSession(user){currentUser=user;progress=null;courseSpaces.setUser(user);instrument=user?.instrument||'electricBass';lessonLevel=user?.level||'basic';await practice.setUser(user);harmony.setUser(user);scaleAtlas.setUser(user);},
+  async onSession(user){learningStore.beginSession();currentUser=user;progress=null;courseSpaces.setUser(user);learningTools.setUser(user);instrument=user?.instrument||'electricBass';lessonLevel=user?.level||'basic';await practice.setUser(user);harmony.setUser(user);scaleAtlas.setUser(user);await learningStore.setUser(user);},
   onProgress:loadProgress,
   onReady:user=>help.setUser(user),
   onPractice(){location.hash='practicar';navigate();},
@@ -79,7 +83,7 @@ const readingText=object=>{
 };
 async function openLesson(id){
  if(!/^[BIA]\d{2}$/.test(id))return;
- harmony.stop();practice.stop();
+ harmony.stop();practice.stop();learningTools.stop();
  currentLessonId=id;const run=++dialogRun,dialog=$('#detail-dialog');
  $('#detail-label').textContent='LECCIÓN '+id;$('#detail-content').innerHTML='<p>Cargando lección…</p>';
  if(!dialog.open)dialog.showModal();
@@ -155,7 +159,7 @@ async function loadProgress(){
  if(!currentUser){progress=null;progressError='Iniciá sesión para guardar tu progreso.';renderPoints();if(page==='curso')renderCourse();return;}
  try {const response=await fetch('/api/progress',{credentials:'same-origin',cache:'no-store'});const data=await response.json();if(!response.ok)throw new Error(data.error||'No pudimos cargar tu progreso.');progress=data;progressError='';}
  catch(error){progress=null;progressError=error.message;}
- renderPoints();if(page==='curso')renderCourse();if(currentLessonId&&$('#detail-dialog').open)renderCompletion(currentLessonId);
+ learningTools.setProgress(progress);renderPoints();if(page==='curso')renderCourse();if(currentLessonId&&$('#detail-dialog').open)renderCompletion(currentLessonId);
 }
 function renderCompletion(id){
  const panel=$('#completion-panel');if(!panel)return;

@@ -1,6 +1,8 @@
 import {catalog,GROUPS,generatedScore,parseScore,PracticeEngine,playablePosition} from './practice-engine.mjs';
 import {activeRepertoire} from './repertoire.mjs';
 import {parseMidi} from './midi-score.mjs';
+import {planFingering,routeHTML,stringNames} from './fingering.mjs';
+import {learningStore} from './learning-store.mjs';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const labels={basic:'Básico',intermediate:'Intermedio',advanced:'Avanzado'};
 const noteNames=['Do','Do♯','Re','Mi♭','Mi','Fa','Fa♯','Sol','La♭','La','Si♭','Si'];
@@ -41,12 +43,18 @@ export function mountPractice(host,{onLesson,onJournal}) {
       <p><a href="repertoire/README.md" target="_blank" rel="noopener">Procedencia, licencias y límites</a> · <a href="repertoire/asset-manifest.json" target="_blank" rel="noopener">Manifiesto verificable de archivos</a></p>
     </details>`;
   const $=s=>host.querySelector(s);
-  let item,score,instrument='electricBass',loadRun=0,storageKey='appbass-practice-guest',sessionSeconds=0,lastFrame=0,preferencesReady=false;
+  $('#practice-instrument').insertAdjacentHTML('beforeend','<option value="electricBass5">Bajo de cinco cuerdas · B–E–A–D–G</option>');
+  $('#practice-source').insertAdjacentHTML('beforebegin','<details class="practice-route"><summary>Recorrido guiado por compás · notas y tablatura</summary><div id="practice-route-content"></div><button type="button" class="secondary" id="practice-print">Imprimir este compás</button></details>');
+  let item,score,planned=[],positionMap=new Map(),shownBar=-1,instrument='electricBass',loadRun=0,storageKey='appbass-practice-guest',sessionSeconds=0,lastFrame=0,preferencesReady=false;
+  function plan(){planned=planFingering(score?.notes||[],instrument);positionMap=new Map((score?.notes||[]).map((n,i)=>[n,planned[i]]));shownBar=-1;}
+  function pos(n){return positionMap.get(n)||playablePosition(n.midi,instrument);}
+  $('#practice-print').onclick=()=>{const sheet=document.createElement('section');sheet.id='bass-print-sheet';sheet.innerHTML='<h1>Appbass · '+esc(item.title)+'</h1>'+$('#practice-route-content').innerHTML;document.querySelector('#bass-print-sheet')?.remove();document.body.append(sheet);window.print();};
   const engine=new PracticeEngine((beat,tempo)=>{
     if(lastFrame&&document.visibilityState==='visible')sessionSeconds+=Math.min(1,(performance.now()-lastFrame)/1000);
     lastFrame=performance.now();draw(beat);$('#practice-tempo').value=String(tempo);
   },()=>{lastFrame=0;$('#practice-play').textContent='Reproducir';$('#practice-status').textContent='Práctica terminada. Podés repetirla o guardarla en tu diario.';});
-  function save(){if(!preferencesReady)return;try{localStorage.setItem(storageKey,JSON.stringify({id:item?.id,tempo:engine.tempo,instrument,difficulty:$('#practice-difficulty').value}));}catch{}}
+  function save(){if(!preferencesReady)return;const value={id:item?.id,tempo:engine.tempo,instrument,difficulty:$('#practice-difficulty').value};try{localStorage.setItem(storageKey,JSON.stringify(value));}catch{}if(learningStore.user&&storageKey==='appbass-practice-'+learningStore.user.id)learningStore.setPreference('practice',value).then(()=>$('#practice-status').textContent='Preferencias guardadas en tu cuenta.').catch(e=>$('#practice-status').textContent='No se guardó en la nube: '+e.message);}
+  learningStore.subscribe(async()=>{if(!learningStore.user||storageKey!=='appbass-practice-'+learningStore.user.id||!learningStore.ready)return;const pref=learningStore.preference('practice');if(!pref)return;preferencesReady=false;instrument=pref.instrument||instrument;$('#practice-instrument').value=instrument;$('#practice-difficulty').value=pref.difficulty||'roots';await load(pref.id||item?.id);if(pref.tempo){engine.tempo=pref.tempo;$('#practice-tempo').value=pref.tempo;}preferencesReady=true;});
   function choices(){
     const level=$('#practice-level').value;
     $('#exercise-select').innerHTML=Object.entries(GROUPS).map(([k,label])=>`<optgroup label="${label}">${catalog.filter(c=>c.group===k&&(!level||c.level===level)).map(c=>`<option value="${c.id}">${esc(c.title)} · ${labels[c.level]} · ${c.minutes} min</option>`).join('')}</optgroup>`).join('');
@@ -59,7 +67,7 @@ export function mountPractice(host,{onLesson,onJournal}) {
     $('#practice-source').textContent='';
     try {
       let next;
-      if(item.generated)next=generatedScore(item.generated,$('#practice-difficulty').value);
+      if(item.generated)next=generatedScore(item.generated==='strings'&&instrument==='electricBass5'?'strings5':item.generated,$('#practice-difficulty').value);
       else if(item.midi){const r=await fetch(item.midi);if(!r.ok)throw Error();next=parseMidi(await r.arrayBuffer());}
       else {
         const base=`course/lessons/${item.lesson}/`;
@@ -71,7 +79,7 @@ export function mountPractice(host,{onLesson,onJournal}) {
       }
       if(run!==loadRun)return false;
       if(!next.notes.length)throw Error();
-      score=next;engine.load(score);
+      score=next;plan();engine.load(score);
       $('#practice-mix option[value="original"]').hidden=!item.midi;
       if(!item.midi&&engine.mix==='original')setMix('full');
       $('#exercise-title').textContent=item.title;$('#exercise-goal').textContent=item.goal;
@@ -92,18 +100,24 @@ export function mountPractice(host,{onLesson,onJournal}) {
     const active=score.notes.find(n=>beat>=n.beat&&beat<n.beat+n.duration);
     const current=score.bars.findIndex(b=>beat>=b.beat&&beat<b.beat+b.length);
     $('#practice-bars').querySelectorAll('button').forEach((b,i)=>{b.classList.toggle('current',i===current);b.setAttribute('aria-pressed',String(i===current));});
-    $('#practice-note').textContent=active?`Compás ${current+1} · ${noteNames[active.midi%12]}`:`Compás ${current+1} · Silencio`;
+    const activePos=active?pos(active):null;
+    $('#practice-note').textContent=active?`Compás ${current+1} · ${noteNames[active.midi%12]}${activePos?' · cuerda '+stringNames(instrument)[activePos.string]+' · '+(instrument==='doubleBass'?'semitono ':'traste ')+activePos.fret+(activePos.shift?' · Cambio de posición':''):''}`:`Compás ${current+1} · Silencio`;
+    if(current!==shownBar){shownBar=current;const bar=score.bars[current];const route=planned.filter(n=>bar&&n.beat>=bar.beat&&n.beat<bar.beat+bar.length).map((n,i)=>({...n,step:i+1,symbol:noteNames[n.midi%12]}));$('#practice-route-content').innerHTML='<h3>Compás '+(current+1)+'</h3>'+routeHTML(route,instrument);}
     const upcoming=score.notes.filter(n=>n.beat>=beat&&n.beat-beat<4);
-    const positions=[...upcoming,...(active?[active]:[])].map(n=>playablePosition(n.midi,instrument)).filter(Boolean);
+    const bar=score.bars[current],step=active&&bar?score.notes.filter(n=>n.beat>=bar.beat&&n.beat<bar.beat+bar.length).indexOf(active)+1:0;
+    $('#practice-route-content').querySelectorAll('[data-route-step]').forEach(n=>n.classList.toggle('route-active',Number(n.dataset.routeStep)===step));
+    $('#practice-route-content').querySelectorAll('[data-route-steps]').forEach(n=>n.classList.toggle('route-active',step>0&&n.dataset.routeSteps.split(' ').includes(String(step))));
+    const positions=[...upcoming,...(active?[active]:[])].map(pos).filter(Boolean);
     const maxFret=Math.max(12,...positions.map(p=>p.fret)),base=Math.max(0,maxFret-12);
     const color=n=>{const bar=score.bars.find(b=>n.beat>=b.beat&&n.beat<b.beat+b.length);if(bar?.root==null)return '#bd8cff';const interval=(n.midi-bar.root+120)%12;return interval===0?'#48e3ed':[3,4].includes(interval)?'#ff6cba':[6,7].includes(interval)?'#88ff99':[10,11].includes(interval)?'#ffc571':'#bd8cff';};
     let svg='<defs><filter id="practice-glow" x="-70%" y="-70%" width="240%" height="240%"><feGaussianBlur stdDeviation="3"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><rect x="80" y="165" width="880" height="105" rx="6" fill="#0b1420"/>';
     for(let f=0;f<=12;f++){const x=90+f*71;svg+=`<line x1="${x}" y1="165" x2="${x}" y2="270" stroke="#42536a" ${instrument==='doubleBass'?'stroke-dasharray="3 4"':''}/><text x="${x}" y="291" fill="#a8bad0" text-anchor="middle" font-size="12">${base+f}</text>`;}
-    ['Sol','Re','La','Mi'].forEach((s,i)=>{const y=177+i*28;svg+=`<line x1="70" y1="${y}" x2="960" y2="${y}" stroke="#8394aa"/><text x="30" y="${y+4}" fill="#cfdae8" font-size="14">${s}</text>`;});
+    const spacing=instrument==='electricBass5'?22:28;
+    stringNames(instrument).forEach((s,i)=>{const y=177+i*spacing;svg+=`<line x1="70" y1="${y}" x2="960" y2="${y}" stroke="#8394aa"/><text x="30" y="${y+4}" fill="#cfdae8" font-size="14">${s}</text>`;});
     if($('#practice-visual').checked) {
-      for(const n of upcoming){const p=playablePosition(n.midi,instrument);if(!p)continue;const x=90+(p.fret-base)*71,y=150-(n.beat-beat)*32;
+      for(const n of upcoming){const p=pos(n);if(!p)continue;const x=90+(p.fret-base)*71,y=150-(n.beat-beat)*32;
         svg+=`<rect x="${x-15}" y="${y-22}" width="30" height="22" rx="3" fill="#081722" stroke="${color(n)}" stroke-width="2" filter="url(#practice-glow)" opacity="${1-(n.beat-beat)*.12}"/><text x="${x}" y="${y-6}" text-anchor="middle" font-size="10" fill="${color(n)}">${noteNames[n.midi%12]}</text>`;}
-      if(active){const p=playablePosition(active.midi,instrument);if(p)svg+=`<circle cx="${90+(p.fret-base)*71}" cy="${177+p.string*28}" r="13" fill="${color(active)}" filter="url(#practice-glow)"/>`;}
+      if(active){const p=pos(active);if(p)svg+=`<circle cx="${90+(p.fret-base)*71}" cy="${177+p.string*spacing}" r="13" fill="${color(active)}" filter="url(#practice-glow)"/>`;}
     }
     $('#practice-fretboard').innerHTML=svg;
     $('#practice-score').querySelectorAll('[data-beat]').forEach(n=>n.classList.toggle('sounding',beat>=Number(n.dataset.beat)&&beat<Number(n.dataset.beat)+Number(n.dataset.duration)));
@@ -114,7 +128,7 @@ export function mountPractice(host,{onLesson,onJournal}) {
   $('#exercise-select').onchange=e=>load(e.target.value);
   $('#practice-level').onchange=()=>{choices();load($('#exercise-select').value);};
   $('#practice-difficulty').onchange=()=>load(item.id);
-  $('#practice-instrument').onchange=e=>{instrument=e.target.value;draw(engine.position());save();};
+  $('#practice-instrument').onchange=e=>{instrument=e.target.value;if(item?.generated==='strings')void load(item.id);else{plan();draw(engine.position());}save();};
   $('#practice-tempo').onchange=e=>{const v=Number(e.target.value);if(!Number.isFinite(v))return;e.target.value=Math.max(30,Math.min(200,v));engine.configure({tempo:Number(e.target.value)});save();};
   $('#practice-volume').oninput=e=>engine.configure({volume:Number(e.target.value)/100});
   $('#practice-guide').onchange=e=>engine.configure({guide:e.target.checked});
@@ -149,19 +163,20 @@ export function mountPractice(host,{onLesson,onJournal}) {
   document.addEventListener('visibilitychange',()=>{if(document.hidden){engine.pause();lastFrame=0;$('#practice-play').textContent='Reproducir';}});
   choices();void load('open-strings');
   return {
-    async selectExercise(id){if(!catalog.some(c=>c.id===id))return false;$('#practice-level').value='';choices();await load(id);return true;},
+    async selectExercise(id){if(!catalog.some(c=>c.id===id))return false;$('#practice-level').value='';choices();return await load(id);},
     async setUser(user){
       storageKey='appbass-practice-'+(user?.id||'guest');
       let pref;try{pref=JSON.parse(localStorage.getItem(storageKey)||'null');}catch{}
-      preferencesReady=true;
-      instrument=pref?.instrument||user?.instrument||'electricBass';$('#practice-instrument').value=instrument;
+      preferencesReady=false;
+      const selected=pref?.instrument||user?.instrument;instrument=['electricBass','electricBass5','doubleBass'].includes(selected)?selected:'electricBass';$('#practice-instrument').value=instrument;
       $('#practice-level').value='';choices();
       $('#practice-difficulty').value=pref?.difficulty||'roots';
       await load(pref?.id||(user?.level==='advanced'?'turnaround':user?.level==='intermediate'?'ii-v-i':'open-strings'));
       if(pref?.tempo>=30&&pref.tempo<=200){engine.tempo=pref.tempo;$('#practice-tempo').value=pref.tempo;save();}
+      preferencesReady=true;
     },
     async selectLesson(id){const choice=catalog.find(c=>c.lesson===id);if(choice){$('#practice-level').value='';choices();await load(choice.id);}return !!choice;},
-    get current(){return item;},stop:()=>engine.stop()
+    get current(){return item;},stop:()=>{engine.stop();lastFrame=0;draw(engine.start);$('#practice-play').textContent='Reproducir';}
   };
 }
 function renderScore(score) {

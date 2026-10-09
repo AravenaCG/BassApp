@@ -72,7 +72,7 @@ test('daily preference stays isolated by account and blocked storage is reported
  await page.reload();await expect(page.locator('#profile-button')).toBeVisible();
  await expect(page.locator('#atlas-daily-enabled')).not.toBeChecked();
  await page.evaluate(()=>{Storage.prototype.setItem=()=>{throw Error('blocked');};});
- await page.locator('#atlas-daily-enabled').check();await expect(page.locator('.atlas-daily')).toContainText('no permite guardar');
+ await page.locator('#atlas-daily-enabled').check();await expect(page.locator('.atlas-daily')).toContainText('No se guardó en la nube');
  await page.locator('[data-daily-open]').first().click();await expect(page.locator('#atlas-dialog')).toBeVisible();
 });
 test('daily challenge is opt-in, can be self-assessed, disabled, and shared without login',async({page})=>{

@@ -53,10 +53,10 @@ const intervalNames={'1':'fundamental','b2':'segunda menor','2':'segunda mayor',
 export function atlasTheory(item){
  const profile=profiles[item.id];if(!profile)throw Error('Falta teoría de '+item.id);
  const [construction,colors,color,application]=profile,scale=item.kind==='scale';
- const reference=spellDegree(item.root,'1',2,scale).midi;
+ const reference=spellDegree(item.root,'1',item.registerOctave??2,scale).midi;
  const rows=item.pitches.map(p=>{
   const degree=p.degree,number=degree.match(/\d+/)[0],altered=degree!==number;
-  const base=spellDegree(item.root,number,2,scale);
+  const base=spellDegree(item.root,number,item.registerOctave??2,scale);
   return {...p,interval:scale&&degree==='1'?'tónica':intervalNames[degree],semitones:p.midi-reference,derivation:altered?`${base.latin} → ${p.latin}`:p.latin};
  });
  const featured=rows.filter(p=>colors.split(' ').includes(p.degree));

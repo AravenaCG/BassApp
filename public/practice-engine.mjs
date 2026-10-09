@@ -1,4 +1,7 @@
 import {activeRepertoire,backingTracks} from './repertoire.mjs';
+import {positions} from './fingering.mjs';
+export const GENRES=[['rock','Rock','Pulso firme y notas cortas',[0,0,7,0]],['funk','Funk','Síncopas y silencios',[0,7,10,7]],['reggae','Reggae','Espacio y duración',[0,7,0,7]],['cumbia','Cumbia','Fundamental y quinta',[0,7,0,7]],['jazz','Jazz','Conectar notas del acorde',[0,4,7,10]],['blues','Blues','Forma de doce compases',[0,7,9,10]],['bossa','Bossa','Acompañamiento en dos',[0,7,0,7]],['pop','Pop','Motivos claros y repetición',[0,0,7,12]]];
+const genreItems=GENRES.map(([id,title,goal])=>({id:'genre-'+id,title:title+' · estudio original',goal,generated:'genre-'+id,group:'application',level:'basic',minutes:8}));
 export const GROUPS={technique:'Técnica',application:'Aplicación musical',songs:'Piezas originales',backing:'Pistas originales · samples CC0',standards:'Repertorio beta · ragtime'};
 export const catalog=[
  {id:'open-strings',title:'Cuerdas al aire',group:'technique',level:'basic',minutes:5,goal:'Sostener el pulso y cambiar de cuerda',generated:'strings'},
@@ -12,7 +15,7 @@ export const catalog=[
  {id:'turnaround',title:'Turnarounds y reharmonización',group:'application',level:'advanced',minutes:15,goal:'Seguir cambios armónicos más frecuentes',lesson:'A07',material:'solo'},
  {id:'first-groove',title:'Primer encuentro',group:'songs',level:'basic',minutes:8,goal:'Acompañar una pieza original de ocho compases',generated:'song1'},
  {id:'evening',title:'Paseo al atardecer',group:'songs',level:'basic',minutes:10,goal:'Explorar una progresión menor en una pieza original',generated:'song2'}
- ,...backingTracks.map(track=>({id:track.id,title:track.title,group:'backing',level:'intermediate',minutes:10,goal:'Practicar con acompañamiento original; no es una transcripción de un standard',generated:track.id})),
+ ,...genreItems,...backingTracks.map(track=>({id:track.id,title:track.title,group:'backing',level:'intermediate',minutes:10,goal:'Practicar con acompañamiento original; no es una transcripción de un standard',generated:track.id})),
  ...activeRepertoire().filter(r=>r.midi).map(r=>({...r,group:'standards',level:'advanced',minutes:15,goal:'Reducción automática didáctica del registro grave del piano; no es una parte original de contrabajo'}))
 ];
 const roots={C:36,D:38,E:40,F:29,G:31,A:33,B:35};
@@ -20,8 +23,18 @@ const pc={C:0,D:2,E:4,F:5,G:7,A:9,B:11};
 // +4 dB for musical voices; keep the short metronome click at its existing level.
 export const PRACTICE_MUSIC_BOOST=10**(4/20);
 export function generatedScore(type, difficulty='roots') {
-  if(type==='strings'||type==='scale') {
-    const pitches=type==='strings'?[28,28,33,33,38,38,43,43]:[36,38,40,41,43,45,47,48,47,45,43,41,40,38,36,36];
+  if(type.startsWith('genre-')){
+    const [id,,goal,motif]=GENRES.find(g=>type==='genre-'+g[0])||GENRES[0];
+    const base=generatedScore(id==='blues'?'blues':'song1',difficulty);
+    const rhythms={rock:[0,1,2,3],funk:[0,.75,2,2.75],reggae:[0,1.5,2.5,3],cumbia:[0,1.5,2,3.5],jazz:[0,1,2,3],blues:[0,1,2,3],bossa:[0,1.5,2,3.5],pop:[0,1,2.5,3]};
+    base.notes=base.bars.flatMap(b=>rhythms[id].map((offset,i)=>({beat:b.beat+offset,duration:Math.min(.65,4-offset),midi:b.root+(difficulty==='roots'?0:difficulty==='fifths'?(i%2?7:0):motif[i])})));
+    const accents={rock:[0,2],funk:[.5,1.75,2.5,3.75],reggae:[.5,1.5,2.5,3.5],cumbia:[0,1.5,2,3.5],jazz:[0,2+2/3],blues:[0,2],bossa:[0,1.5,2.5,3.5],pop:[0,1,2,3]};
+    base.backing=base.bars.flatMap(b=>accents[id].flatMap(offset=>[12,16,19].map(interval=>({beat:b.beat+offset,duration:Math.min(.3,4-offset),midi:b.root+interval}))));
+    if(difficulty==='walking')base.bars.forEach((b,i)=>{base.notes[i*4+3].midi=base.bars[(i+1)%base.bars.length].root+1;});
+    return {...base,style:id==='jazz'||id==='blues'?'swing':'straight',genre:id,goal,tempo:id==='reggae'?65:id==='funk'?90:80};
+  }
+  if(type==='strings'||type==='strings5'||type==='scale') {
+    const pitches=type==='strings5'?[23,23,28,28,33,33,38,38,43,43,43,43]:type==='strings'?[28,28,33,33,38,38,43,43]:[36,38,40,41,43,45,47,48,47,45,43,41,40,38,36,36];
     return {tempo:60,beatsPerBar:4,totalBeats:pitches.length,
       bars:Array.from({length:pitches.length/4},(_,i)=>({beat:i*4,length:4,chord:type==='scale'?'C':'',root:type==='scale'?36:null,quality:'major'})),
       notes:pitches.map((midi,beat)=>({beat,duration:1,midi}))};
@@ -87,8 +100,7 @@ export function parseScore(xml, Parser=globalThis.DOMParser) {
   return {tempo,beatsPerBar,totalBeats:time,bars,notes:notes.sort((a,b)=>a.beat-b.beat)};
 }
 export function playablePosition(midi,instrument='electricBass') {
-  const strings=[43,38,33,28], max=instrument==='doubleBass'?24:24;
-  const choices=strings.map((open,string)=>({string,fret:midi-open})).filter(x=>x.fret>=0&&x.fret<=max);
+  const choices=positions(midi,instrument);
   return choices.sort((a,b)=>a.fret-b.fret)[0]||null;
 }
 // One AudioContext timeline drives sound, cursor, falling notes, tempo and loops.
@@ -153,7 +165,7 @@ export class PracticeEngine {
       this.tone(n.midi,this.anchorTime+(n.beat-from)*s,Math.min(n.duration,until-n.beat)*s*.85,.13*PRACTICE_MUSIC_BOOST);
     if(this.mix!=='bass-only'){
       for(const n of this.score.backing||[])if(n.beat>=from&&n.beat<until)this.sample('piano-c3',n.midi,this.anchorTime+(n.beat-from)*s,Math.min(n.duration,until-n.beat)*s,.035*PRACTICE_MUSIC_BOOST);
-      for(const bar of this.score.bars)if(bar.beat>=from&&bar.beat<until&&bar.root!==null){
+      for(const bar of this.score.bars)if(!this.score.backing?.length&&bar.beat>=from&&bar.beat<until&&bar.root!==null){
         const third=bar.quality.includes('minor')||bar.quality==='half-diminished'?3:4;
         const intervals=[12,12+third,bar.quality==='half-diminished'?18:19];
         if(bar.chord.includes('7'))intervals.push(bar.quality==='major-seventh'?23:22);

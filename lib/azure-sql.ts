@@ -1,4 +1,5 @@
 import sql from "mssql";
+import { connectBetaPool } from "./beta-sql-guard.mjs";
 
 let poolPromise: Promise<sql.ConnectionPool> | undefined;
 
@@ -9,7 +10,7 @@ function connectionString() {
 }
 
 export function getSqlPool() {
-  poolPromise ??= new sql.ConnectionPool(connectionString()).connect().catch(error => {
+  poolPromise ??= connectBetaPool(connectionString(),sql.ConnectionPool).catch((error:unknown) => {
     poolPromise = undefined;
     throw error;
   });

@@ -1,6 +1,7 @@
 import sql from 'mssql';
 import {readFile} from 'node:fs/promises';
-const pool=await new sql.ConnectionPool(process.env.AZURE_SQL_CONNECTION_STRING).connect();
+import {connectBetaPool} from '../lib/beta-sql-guard.mjs';
+const pool=await connectBetaPool(process.env.AZURE_SQL_CONNECTION_STRING,sql.ConnectionPool);
 try {
   const db=await pool.request().query('SELECT DB_NAME() AS name');
   if(db.recordset[0].name!=='AppbassBeta')throw Error('Unexpected target database');

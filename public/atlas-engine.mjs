@@ -70,9 +70,11 @@ export const ATLAS_FAMILIES=[
 ];
 export function atlasItem(familyId,root='C'){
  const family=ATLAS_FAMILIES.find(f=>f.id===familyId);if(!family)throw Error('Familia no válida');const tonic=tonicInfo(root);
- const pitches=family.degrees.map(d=>spellDegree(root,d,2,family.kind==='scale'));
+ let pitches=family.degrees.map(d=>spellDegree(root,d,2,family.kind==='scale'));
+ const registerOctave=pitches.some(p=>p.midi>67)?1:2;
+ if(registerOctave===1)pitches=family.degrees.map(d=>spellDegree(root,d,1,family.kind==='scale'));
  const symbol=family.chord==='/3'?root+'/'+spellDegree(root,'3').symbol:family.chord===null?root:root+family.chord;
- return {...family,root,pitches,symbol,tonic:tonic.latin,title:`${symbol} / ${tonic.latin} · ${family.name}`};
+ return {...family,root,pitches,registerOctave,symbol,tonic:tonic.latin,title:`${symbol} / ${tonic.latin} · ${family.name}`};
 }
 export function atlasScore(item){
  const path=[...item.pitches,...item.pitches.slice(0,-1).reverse()],notes=path.map((p,beat)=>({...p,beat,duration:1}));
