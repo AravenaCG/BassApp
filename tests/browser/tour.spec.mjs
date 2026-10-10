@@ -18,19 +18,19 @@ test('tour has 40 venues, keeps musical lessons and marks future concerts and re
  const state=await setup(page);await page.setViewportSize({width:390,height:844});await page.goto('/appbass.html#curso');
  await expect(page.locator('#profile-button')).toBeVisible();await expect(page.locator('#course-map [data-lesson=B01]')).toContainText('Tocar en tu cuarto');
  await expect(page.locator('.tour-coming')).toContainText('PRÓXIMAMENTE');await expect(page.locator('.tour-coming')).toContainText('Todavía no están disponibles');
- await page.locator('.tour-look summary').click();await page.locator('#tour-controls [data-tour-character=woman]').click();
+ await page.locator('.tour-look summary').click();await page.locator('#tour-controls [data-tour-character=pulse]').click();
  await page.locator('#tour-controls [data-tour-color]').selectOption('coral');
- await expect(page.locator('#tour-controls [data-tour-character=woman]')).toHaveAttribute('aria-pressed','true');
+ await expect(page.locator('#tour-controls [data-tour-character=pulse]')).toHaveAttribute('aria-pressed','true');
  await expect(page.locator('#course-map')).toHaveCSS('--tour-accent','#ff9d9d');
- await page.locator('#profile-button').click();await expect(page.locator('#profile-dialog [data-tour-character=woman]')).toHaveAttribute('aria-pressed','true');
+ await page.locator('#profile-button').click();await expect(page.locator('#profile-dialog [data-tour-character=pulse]')).toHaveAttribute('aria-pressed','true');
  await page.locator('#profile-dialog [data-tour-color]').selectOption('gold');await page.locator('#profile-dialog [data-close]').click();
  await expect(page.locator('#tour-controls [data-tour-color]')).toHaveValue('gold');
- await page.reload();await page.locator('.tour-look summary').click();await expect(page.locator('#tour-controls [data-tour-character=woman]')).toHaveAttribute('aria-pressed','true');
+ await page.reload();await page.locator('.tour-look summary').click();await expect(page.locator('#tour-controls [data-tour-character=pulse]')).toHaveAttribute('aria-pressed','true');
  await page.setViewportSize({width:390,height:844});expect(state.writes()).toBe(0);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
  await page.locator('#tour-controls').screenshot({path:'outputs/tour-avatar-mobile.png'});await page.locator('.journey-station.current').screenshot({path:'outputs/tour-stop-mobile.png'});
  await page.locator('[data-level=advanced]').click();await expect(page.locator('#course-map [data-lesson=A12]')).toContainText('Show en River Plate');
  await page.locator('#journey-layout').click();await expect(page.locator('#course-list [data-lesson=A12] .list-venue')).toHaveText('Show en River Plate');
- state.setUser({...user,id:'other-tour'});await page.reload();await page.locator('.tour-look summary').click();await expect(page.locator('#tour-controls [data-tour-character=man]')).toHaveAttribute('aria-pressed','true');
+ state.setUser({...user,id:'other-tour'});await page.reload();await page.locator('.tour-look summary').click();await expect(page.locator('#tour-controls [data-tour-character=groove]')).toHaveAttribute('aria-pressed','true');
  await expect(page.locator('#tour-controls [data-tour-color]')).toHaveValue('cyan');
 });
 test('avatar travels only after successful save; reduced motion and unavailable storage stay usable',async({page})=>{
@@ -41,7 +41,7 @@ test('avatar travels only after successful save; reduced motion and unavailable 
  await page.locator('#course-map [data-lesson=B03]').scrollIntoViewIfNeeded();await expect.poll(()=>page.evaluate(()=>window.__tourMoves)).toBe(1);
  await expect(page.locator('.journey-traveler')).toHaveCount(0);await page.reload();await expect(page.locator('.journey-station.current button')).toHaveAttribute('data-lesson','B03');expect(await page.evaluate(()=>window.__tourMoves)).toBe(0);
  await page.emulateMedia({reducedMotion:'reduce'});await page.locator('.tour-look summary').click();await page.evaluate(()=>{Storage.prototype.setItem=()=>{throw Error('blocked');};});
- await page.locator('#tour-controls [data-tour-character=woman]').click();await expect(page.locator('#tour-controls [data-tour-status]')).toContainText('No se pudo guardar');
+ await page.locator('#tour-controls [data-tour-character=pulse]').click();await expect(page.locator('#tour-controls [data-tour-status]')).toContainText('No se pudo guardar');
  await page.locator('#tour-controls [data-tour-motion]').uncheck();await expect(page.locator('.journey-traveler')).toHaveCount(0);
  await page.locator('#profile-button').click();await page.locator('#logout').click();await expect(page.locator('.journey-station.current button')).toHaveAttribute('data-lesson','B01');expect(await page.evaluate(()=>window.__tourMoves)).toBe(0);
 });

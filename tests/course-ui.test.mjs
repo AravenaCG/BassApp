@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync,existsSync} from 'node:fs';
 import {journeyState,journeyHTML,readingExercisesHTML} from '../public/course-ui.mjs';
-import {TOUR_STOPS,tourStop,tourPreferences,readTourPreferences,writeTourPreferences,avatarSVG} from '../public/tour.mjs';
+import {TOUR_STOPS,TOUR_AVATARS,tourStop,tourPreferences,readTourPreferences,writeTourPreferences,avatarSVG} from '../public/tour.mjs';
 const course=JSON.parse(readFileSync(new URL('../public/course/course.json',import.meta.url)));
 test('every real lesson has a unique concert-tour stop without replacing its educational title',()=>{
  const lessons=course.levels.flatMap(l=>l.lessons);
@@ -13,14 +13,15 @@ test('every real lesson has a unique concert-tour stop without replacing its edu
 });
 test('tour appearance validates values, isolates accounts and tolerates unavailable storage',()=>{
  const store=new Map(),storage={getItem:k=>store.get(k),setItem:(k,v)=>store.set(k,v)};
- const first={id:'first'},second={id:'second'},look={character:'woman',color:'coral',motion:false};
+ const first={id:'first'},second={id:'second'},look={character:'pulse',color:'coral',motion:false};
  assert.equal(writeTourPreferences(first,look,storage),true);assert.deepEqual(readTourPreferences(first,storage),look);
  assert.deepEqual(readTourPreferences(second,storage),tourPreferences());assert.deepEqual(readTourPreferences(null,storage),tourPreferences());
  assert.deepEqual(tourPreferences({character:'<script>',color:'<script>',motion:'no'}),tourPreferences());
  const blocked={getItem(){throw Error('blocked');},setItem(){throw Error('blocked');}};
  assert.deepEqual(readTourPreferences(first,blocked),tourPreferences());assert.equal(writeTourPreferences(first,look,blocked),false);
  storage.setItem('appbass-tour-look-v1-first','bad json');assert.deepEqual(readTourPreferences(first,storage),tourPreferences());
- assert.ok(!avatarSVG({color:'<script>'}).includes('<script>'));assert.notEqual(avatarSVG(look),avatarSVG(look,'doubleBass'));
+ assert.equal(Object.keys(TOUR_AVATARS).length,3);assert.ok(!avatarSVG({color:'<script>'}).includes('<script>'));assert.notEqual(avatarSVG(look),avatarSVG({...look,character:'upright'}));
+ assert.equal(tourPreferences({character:'man'}).character,'groove');assert.equal(tourPreferences({character:'woman'}).character,'pulse');
 });
 test('journey follows first real gap, handles revisits and completed levels without inventing progress',()=>{
  const lessons=course.levels[0].lessons;

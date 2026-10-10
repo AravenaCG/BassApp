@@ -1,7 +1,39 @@
 # Appbass — deployment plan
 
-Status: Deployed — sampled bass image verified Healthy; public A/B audio tests passed.
+Status: Validated — avatar and scroll-aligned learning journey ready for CI/CD deployment.
 Updated: 2026-10-09.
+
+## Validation proof — artistic avatars and learning journey, 2026-10-09
+
+User explicitly requested implementation, commit, push and deployment. Scope is an
+image-only/code UI release: three approved avatar choices, three progressive journey
+worlds recomposed for natural top-to-bottom page scrolling, compact accessible lesson
+stations, profile avatar synchronization and legacy preference migration. Existing
+lesson IDs, progress, points, authentication and SQL-backed learning data are unchanged.
+
+- `node --test tests/*.test.mjs`: 39/39 passed.
+- `corepack pnpm exec tsc --noEmit --incremental false`: exit 0.
+- `npm.cmd run build:azure`: exit 0 after final assets/CSS; Nitro Node package built.
+- `APPBASS_TEST_URL=http://127.0.0.1:3101 playwright test
+  tests/browser/beta.spec.mjs tests/browser/tour.spec.mjs`: 16/16 passed (1.8m).
+  Covers desktop/mobile maps, no horizontal overflow, all 40 venues, avatar selection,
+  profile synchronization, account isolation, reduced motion and successful-save-only
+  travel. Account APIs are mocked; no production user or SQL write occurred.
+- Desktop and mobile screenshots inspected. Basic now flows room → garage → first stage;
+  advanced flows festival/backstage → city → River Plate in page-scroll direction.
+- `git diff --check`: clean. Private `/docs` remain excluded. Generated
+  `tsconfig.tsbuildinfo` is explicitly excluded from the commit.
+- Azure CLI confirmed subscription `d8a9c4b4-89a1-482d-88dd-ac38d3d289a1`
+  (`hunters_killer@hotmail.com`), existing `appbass` / `rg-appbass-prod` / Brazil South,
+  provisioning state Succeeded, revision `appbass--0000018` ready, identity None.
+- Existing deployment ServicePrincipal retains Contributor at resource-group scope.
+  No role assignment, identity, secret, budget, region, SKU, network or SQL change.
+- Existing GitHub Actions image-only recipe remains unchanged and is the Linux Docker
+  validation/deployment gate. Bicep compilation, ARM what-if, provisioning quotas,
+  policy and ACR managed-identity propagation are N/A: zero infrastructure changes.
+
+Rollback: select the previous immutable Container App image/revision. No database or
+resource rollback is required because this release performs no migrations/provisioning.
 
 ## Validation proof — sampled bass release, 2026-10-09
 

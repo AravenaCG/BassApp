@@ -1,4 +1,4 @@
-import {mountTourPreferences} from './tour.mjs';
+import {mountTourPreferences,avatarSVG,readTourPreferences,tourKey} from './tour.mjs';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export async function api(path,body,method='POST'){
   const r=await fetch(path,{method:body===undefined?'GET':method,credentials:'same-origin',cache:'no-store',
@@ -54,6 +54,13 @@ export function mountAccount({onSession,onProgress,onPractice,onLesson,onReady=(
   profile.className='avatar small-avatar';profile.textContent='♪';profile.setAttribute('aria-label','Mi perfil');profile.title='Mi perfil';profile.hidden=true;profile.id='profile-button';avatar.replaceWith(profile);
   register.onclick=()=>openAuth('register');login.onclick=()=>openAuth('login');
   const side=document.querySelector('.profile');side.tabIndex=0;side.setAttribute('role','button');side.setAttribute('aria-label','Abrir mi perfil');
+  const sideAvatar=side.querySelector('.avatar');
+  function syncAvatar(){
+    let markup='♪';
+    if(user)try{markup=avatarSVG(readTourPreferences(user,localStorage));}catch{}
+    profile.innerHTML=markup;sideAvatar.innerHTML=markup;
+  }
+  document.addEventListener('tour-look-change',e=>{if(user&&e.detail.key===tourKey(user))syncAvatar();});
   profile.onclick=()=>openProfile();side.onclick=()=>user?openProfile():openAuth();side.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();side.click();}};
   const home=document.createElement('article');home.className='card today-card';home.id='today-card';document.querySelector('#inicio .heading').after(home);
   const reminder=document.createElement('article');reminder.className='card reminder-card';reminder.hidden=true;reminder.id='weekly-reminder';home.before(reminder);
@@ -76,9 +83,9 @@ export function mountAccount({onSession,onProgress,onPractice,onLesson,onReady=(
         reminder.innerHTML='<p class="eyebrow">TU RECORDATORIO SEMANAL</p><h3>Tu bajo te guardó un momento.</h3><p>Una sesión corta también cuenta. ¿Retomamos donde quedaste?</p><div class="button-row"><button class="primary" data-act="start">Practicar ahora</button><button class="secondary" data-act="snooze">Recordar mañana</button><button class="secondary" data-act="dismiss">Ya lo vi</button></div><p role="status"></p>';
         reminder.querySelectorAll('button').forEach(b=>b.onclick=async()=>{try{await api('/api/activity',{kind:'reminder',action:b.dataset.act==='snooze'?'snooze':'dismiss'});reminder.hidden=true;if(b.dataset.act==='start')onPractice();}catch(e){reminder.querySelector('[role=status]').textContent=e.message;}});
       }
-      await onSession(user);await onProgress();
+      await onSession(user);syncAvatar();await onProgress();
       onReady(user);
-    } catch(e){home.textContent='No pudimos cargar tu cuenta. Podés volver a iniciar sesión.';login.hidden=false;register.hidden=false;}
+    } catch{home.textContent='No pudimos cargar tu cuenta. Podés volver a iniciar sesión.';login.hidden=false;register.hidden=false;}
   }
   form.onsubmit=async e=>{
     e.preventDefault();error.textContent='';
