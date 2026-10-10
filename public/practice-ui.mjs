@@ -3,6 +3,7 @@ import {activeRepertoire} from './repertoire.mjs';
 import {parseMidi} from './midi-score.mjs';
 import {planFingering,routeHTML,stringNames} from './fingering.mjs';
 import {learningStore} from './learning-store.mjs';
+import {mountBassSound} from './bass-sound-ui.mjs';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const labels={basic:'Básico',intermediate:'Intermedio',advanced:'Avanzado'};
 const noteNames=['Do','Do♯','Re','Mi♭','Mi','Fa','Fa♯','Sol','La♭','La','Si♭','Si'];
@@ -43,6 +44,7 @@ export function mountPractice(host,{onLesson,onJournal}) {
       <p><a href="repertoire/README.md" target="_blank" rel="noopener">Procedencia, licencias y límites</a> · <a href="repertoire/asset-manifest.json" target="_blank" rel="noopener">Manifiesto verificable de archivos</a></p>
     </details>`;
   const $=s=>host.querySelector(s);
+  mountBassSound(host);
   $('#practice-instrument').insertAdjacentHTML('beforeend','<option value="electricBass5">Bajo de cinco cuerdas · B–E–A–D–G</option>');
   $('#practice-source').insertAdjacentHTML('beforebegin','<details class="practice-route"><summary>Recorrido guiado por compás · notas y tablatura</summary><div id="practice-route-content"></div><button type="button" class="secondary" id="practice-print">Imprimir este compás</button></details>');
   let item,score,planned=[],positionMap=new Map(),shownBar=-1,instrument='electricBass',loadRun=0,storageKey='appbass-practice-guest',sessionSeconds=0,lastFrame=0,preferencesReady=false;
@@ -53,6 +55,7 @@ export function mountPractice(host,{onLesson,onJournal}) {
     if(lastFrame&&document.visibilityState==='visible')sessionSeconds+=Math.min(1,(performance.now()-lastFrame)/1000);
     lastFrame=performance.now();draw(beat);$('#practice-tempo').value=String(tempo);
   },()=>{lastFrame=0;$('#practice-play').textContent='Reproducir';$('#practice-status').textContent='Práctica terminada. Podés repetirla o guardarla en tu diario.';});
+  engine.onSoundStatus=value=>$('#bass-sound-status').textContent='Sonido activo: '+value;
   function save(){if(!preferencesReady)return;const value={id:item?.id,tempo:engine.tempo,instrument,difficulty:$('#practice-difficulty').value};try{localStorage.setItem(storageKey,JSON.stringify(value));}catch{}if(learningStore.user&&storageKey==='appbass-practice-'+learningStore.user.id)learningStore.setPreference('practice',value).then(()=>$('#practice-status').textContent='Preferencias guardadas en tu cuenta.').catch(e=>$('#practice-status').textContent='No se guardó en la nube: '+e.message);}
   learningStore.subscribe(async()=>{if(!learningStore.user||storageKey!=='appbass-practice-'+learningStore.user.id||!learningStore.ready)return;const pref=learningStore.preference('practice');if(!pref)return;preferencesReady=false;instrument=pref.instrument||instrument;$('#practice-instrument').value=instrument;$('#practice-difficulty').value=pref.difficulty||'roots';await load(pref.id||item?.id);if(pref.tempo){engine.tempo=pref.tempo;$('#practice-tempo').value=pref.tempo;}preferencesReady=true;});
   function choices(){

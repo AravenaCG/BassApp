@@ -1,5 +1,6 @@
 import {activeRepertoire,backingTracks} from './repertoire.mjs';
 import {positions} from './fingering.mjs';
+import {bassSound,BASS_SOUNDS,BASS_BANKS,loadBassBank,nearestBassSample} from './bass-sounds.mjs';
 export const GENRES=[['rock','Rock','Pulso firme y notas cortas',[0,0,7,0]],['funk','Funk','Síncopas y silencios',[0,7,10,7]],['reggae','Reggae','Espacio y duración',[0,7,0,7]],['cumbia','Cumbia','Fundamental y quinta',[0,7,0,7]],['jazz','Jazz','Conectar notas del acorde',[0,4,7,10]],['blues','Blues','Forma de doce compases',[0,7,9,10]],['bossa','Bossa','Acompañamiento en dos',[0,7,0,7]],['pop','Pop','Motivos claros y repetición',[0,0,7,12]]];
 const genreItems=GENRES.map(([id,title,goal])=>({id:'genre-'+id,title:title+' · estudio original',goal,generated:'genre-'+id,group:'application',level:'basic',minutes:8}));
 export const GROUPS={technique:'Técnica',application:'Aplicación musical',songs:'Piezas originales',backing:'Pistas originales · samples CC0',standards:'Repertorio beta · ragtime'};
@@ -118,18 +119,54 @@ export class PracticeEngine {
       this.output=this.context.createDynamicsCompressor();this.output.threshold.value=-6;this.output.knee.value=6;this.output.ratio.value=12;this.output.attack.value=.003;this.output.release.value=.15;this.output.connect(this.context.destination);
     }
     this.samplesReady??=this.loadSamples();await this.samplesReady;
+    await this.prepareBass(run);
     if(run!==this.playRun)return;
     if(this.beat>=this.end)this.beat=this.start;
     this.playing=true;this.anchorBeat=this.beat;this.anchorTime=this.context.currentTime+.06;this.schedule();this.tick();
   }
-  tone(midi,start,duration,gain=.1,type='triangle'){
+  tone(midi,start,duration,gain=.1,type='bass'){
     if(this.volume<=0)return;
+    if(type==='bass'&&this.bassBank?.length){this.bassSample(midi,start,duration,gain);return;}
     const o=this.context.createOscillator(),g=this.context.createGain();
-    o.type=type;o.frequency.value=440*2**((midi-69)/12);
-    g.gain.setValueAtTime(0,start);g.gain.linearRampToValueAtTime(gain*this.volume,start+.008);
-    g.gain.exponentialRampToValueAtTime(.0001,start+Math.max(.025,duration));
-    o.connect(g);g.connect(this.output||this.context.destination);o.start(start);o.stop(start+duration+.03);
+    const length=Math.max(.025,duration);
+    o.frequency.value=440*2**((midi-69)/12);
+    if(type==='bass'){
+      // One dry, phase-aligned voice: no delay, chorus, detuning or reverb.
+      // Upper partials make low notes readable on small speakers. Explicitly
+      // bounded amplitudes retain the existing peak gain and mix headroom.
+      this.bassWave??=this.context.createPeriodicWave(new Float32Array(6),
+        Float32Array.from([0,1,.45,.2,.08,.035],n=>n/1.765),{disableNormalization:true});
+      o.setPeriodicWave(this.bassWave);
+      const peak=gain*this.volume,attack=Math.min(.004,length*.12),
+        release=Math.min(.025,length*.2),decay=Math.min(.08,length*.35);
+      g.gain.setValueAtTime(0,start);
+      g.gain.linearRampToValueAtTime(peak,start+attack);
+      g.gain.exponentialRampToValueAtTime(peak*.58,start+attack+decay);
+      g.gain.exponentialRampToValueAtTime(peak*.32,start+length-release);
+      g.gain.linearRampToValueAtTime(0,start+length);
+    }else{
+      o.type=type;
+      g.gain.setValueAtTime(0,start);g.gain.linearRampToValueAtTime(gain*this.volume,start+.008);
+      g.gain.exponentialRampToValueAtTime(.0001,start+length);
+    }
+    o.connect(g);g.connect(this.output||this.context.destination);o.start(start);o.stop(start+length+(type==='bass'?0:.03));
     this.nodes.add(o);o.onended=()=>{this.nodes.delete(o);o.disconnect();g.disconnect();};
+  }
+  async prepareBass(run){
+    const sound=this.sound||bassSound(),bank=await loadBassBank(this.context,sound);
+    if(run!==undefined&&run!==this.playRun)return;
+    this.bassBank=bank;
+    this.bassStatus=sound==='synth'?BASS_SOUNDS.synth:this.bassBank.length?BASS_SOUNDS[sound]+(this.bassBank.length<BASS_BANKS[sound].length?' · banco parcial':''):'Respaldo sintetizado · no se cargaron las muestras';
+    this.onSoundStatus?.(this.bassStatus);
+  }
+  bassSample(midi,start,duration,gain){
+    const row=nearestBassSample(this.bassBank,midi),source=this.context.createBufferSource(),g=this.context.createGain();
+    source.buffer=row.buffer;source.playbackRate.value=2**((midi-row.midi)/12);
+    const length=Math.max(.025,Math.min(duration,row.buffer.duration/source.playbackRate.value)),release=Math.min(.025,length*.2),peak=gain*this.volume;
+    g.gain.setValueAtTime(0,start);g.gain.linearRampToValueAtTime(peak,start+Math.min(.003,length*.1));
+    g.gain.setValueAtTime(peak,start+length-release);g.gain.linearRampToValueAtTime(0,start+length);
+    source.connect(g);g.connect(this.output||this.context.destination);source.start(start);source.stop(start+length);
+    this.nodes.add(source);source.onended=()=>{this.nodes.delete(source);source.disconnect();g.disconnect();};
   }
   async loadSamples(){
     this.buffers={};

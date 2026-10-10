@@ -1,0 +1,14 @@
+{
+  "license": "CC0-1.0",
+  "sha256": {
+    "finger-28.flac": "1e6ccfc378443626e2d581ea8ff7c8c455e55467fccdb85d8321344a43e26d46",
+    "finger-33.flac": "c7efb91b6f7a668939b3237e8ca82955697cc7c6c59736768d02c535169dd7e2",
+    "finger-39.flac": "f0ed805d30d9db76b59152162ea8d33cf43866b41b270ee9049243b501dcbc22",
+    "pick-28.flac": "64759164edef31bafe90920831ee40bb2d1c4ca3e5196ad6efa917ddcd5b5ed1",
+    "pick-33.flac": "2addffa45abc40373e2e878d1385b4a06673b99c61e845f82d74571e4f77eb35",
+    "pick-40.flac": "7fc53bd65409dad7c18e8c6141a37f77f2cff744516d42e51768e3fafee59ae5",
+    "upright-31.wav": "de29829839835ec59e6e8c05d6e31c61867abd16723f93eef12aa08417d288a7",
+    "upright-38.wav": "8a0d9e9f0aaef5c5d71606634a893aaaa0f8f9a9cf662466fb9d328b694beabb",
+    "upright-48.wav": "db94ddc047093d13e1568412e03aff3458f42ce08e2c7f3dcb15f2a0a68611b0"
+  }
+}

@@ -60,6 +60,9 @@ export function mountAtlas({stopOtherAudio=()=>{}}={}){
   detail.querySelector('#atlas-tempo').onchange=e=>{const value=Number(e.target.value);if(Number.isFinite(value)){e.target.value=Math.max(30,Math.min(200,value));engine.configure({tempo:Number(e.target.value)});}};
   detail.querySelector('#atlas-volume').oninput=e=>engine.configure({volume:Number(e.target.value)/100});
   detail.querySelector('#atlas-play').onclick=async e=>{const button=e.currentTarget,status=detail.querySelector('#atlas-audio-status');if(engine.playing){engine.pause();button.textContent='Escuchar recorrido';return;}button.disabled=true;try{await engine.play();button.textContent=engine.playing?'Pausar':'Escuchar recorrido';status.textContent=engine.volume>0?'Recorrido ascendente y descendente. Cantá antes de tocar.':'El volumen está en cero. Subilo para escuchar.';}catch{status.textContent='No se pudo iniciar el audio. Volvé a pulsar Escuchar.';}finally{button.disabled=false;}};
+  detail.querySelector('#atlas-audio-status').textContent='Usa el sonido elegido en Practicar → Sonido de bajo. El sonido activo se confirma al reproducir.';
+  const listen=detail.querySelector('#atlas-play').onclick;
+  detail.querySelector('#atlas-play').onclick=async e=>{await listen(e);if(engine.playing)detail.querySelector('#atlas-audio-status').textContent+=' · '+engine.bassStatus;};
   if(!detail.open)detail.showModal();
  }
  function renderDaily(){const done=state.done[challenge.date]||[],visible=state.enabled||shared;

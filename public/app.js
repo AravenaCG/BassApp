@@ -42,6 +42,8 @@ document.addEventListener('course-space-change',()=>harmony.stop());
 function syncCourseSpace(){if(!location.hash.startsWith('#curso'))return;const query=new URLSearchParams(location.hash.split('?')[1]||'');courseSpaces.show(query.get('espacio')==='armonia'||/^H(0[1-9]|1[0-6])$/.test(query.get('unidad')||'')?'harmony':'journey');}
 window.addEventListener('hashchange',syncCourseSpace);syncCourseSpace();
 const scaleAtlas=mountAtlas({stopOtherAudio(){practice.stop();harmony.stop();}});
+document.addEventListener('bass-audition-start',()=>{practice.stop();harmony.stop();scaleAtlas.stop();learningTools.stop();document.querySelectorAll('audio').forEach(a=>a.pause());});
+document.addEventListener('click',e=>{if(e.target.closest('#atlas-play,#harmony-listen,#ear-listen'))document.dispatchEvent(new Event('bass-audition-stop'));});
 const learningTools=mountLearningTools({stopOtherAudio(){practice.stop();harmony.stop();scaleAtlas.stop();},async onPractice(id){learningTools.stop();await practice.selectExercise(id);location.hash='practicar';navigate();workspace.scrollIntoView({block:'start'});},onLesson:openLesson});
 workspace.addEventListener('click',e=>{if(e.target.closest('#practice-play, [data-listen-repertoire]'))learningTools.stop();});
 const account=mountAccount({

@@ -3,6 +3,26 @@
 Status: Validated — image-only publication authorized; mandatory Linux Docker gate runs in existing GitHub CI before Azure update.
 Updated: 2026-10-09.
 
+## Validation proof — sampled bass release, 2026-10-09
+
+User authorizes implementation, commit, push and deployment of real bass sounds
+and a labelled A/B comparison. azure-validate: 38/38 unit tests passed, TypeScript
+exit 0, Azure production build exit 0. Browser suite: 28 passed initially; the
+remaining loop test selected the old first details panel. Updated it to select
+the loop panel specifically; rerun passed (1/1). Real Web Audio offline rendering
+verifies all three sample banks decode, emit bounded nonzero audio and have no
+tail after note end. Browser tests verify labelled finger/pick/upright/synth A/B,
+local preference reload, and explicit fallback on failed sample requests.
+Nine CC0 recordings are bundled with provenance and SHA256 checks. No external
+runtime audio service, dependency, infrastructure, identity, price or SQL change.
+Subscription reverified: d8a9c4b4-89a1-482d-88dd-ac38d3d289a1; existing Brazil South
+appbass / rg-appbass-prod. Existing GHCR image-only workflow reviewed, unchanged;
+Docker context excludes private docs/credentials and frozen pnpm lockfile exists.
+Linux Docker tests/types/build remain mandatory in CI before Azure image update.
+Static RBAC check: no infrastructure edits or new resource/identity relationships;
+provisioning template/what-if/quotas/policy checks N/A to this image-only update.
+Plan status Validated for that established gated recipe, not a claim of local Docker.
+
 ## Publication validation — 2026-10-09
 
 User explicitly requested commit, push and deploy. azure-validate re-ran all 36

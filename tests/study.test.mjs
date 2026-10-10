@@ -1,5 +1,8 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
+import {BASS_BANKS,nearestBassSample} from '../public/bass-sounds.mjs';
 import {nextLesson,LESSON_IDS,reminderDue,sessionPlan} from '../lib/study.mjs';
 import {generatedScore,playablePosition,catalog,PracticeEngine,PRACTICE_MUSIC_BOOST} from '../public/practice-engine.mjs';
 test('progress skips completed lessons, revisits earlier gaps, ends only at 40',()=>{
@@ -57,4 +60,37 @@ test('zero practice volume does not create audible oscillators',()=>{
  const engine=new PracticeEngine();engine.volume=0;
  engine.context={createOscillator(){throw Error('Muted playback must not create a voice');}};
  engine.tone(36,0,1,.13*PRACTICE_MUSIC_BOOST);
+});
+
+test('clean bass has one bounded harmonic voice, a fast attack and no release tail',()=>{
+ const engine=new PracticeEngine();engine.volume=.6;const voices=[],waves=[],envelopes=[];
+ engine.context={destination:{},createPeriodicWave(real,imag,options){waves.push({real,imag,options});return {};},
+  createOscillator(){const voice={frequency:{},connect(){},disconnect(){},setPeriodicWave(w){this.wave=w;},start(t){this.startTime=t;},stop(t){this.stopTime=t;}};voices.push(voice);return voice;},
+  createGain(){const events=[];envelopes.push(events);return {connect(){},disconnect(){},gain:{setValueAtTime(v,t){events.push(['set',v,t]);},linearRampToValueAtTime(v,t){events.push(['linear',v,t]);},exponentialRampToValueAtTime(v,t){events.push(['exp',v,t]);}}};}};
+ for(const duration of [.01,.1,1,4])engine.tone(36,2,duration,.13*PRACTICE_MUSIC_BOOST);
+ assert.equal(waves.length,1);assert.equal(voices.length,4);
+ assert.ok(waves[0].imag.reduce((sum,v)=>sum+Math.abs(v),0)<=1.000001);
+ assert.equal(waves[0].options.disableNormalization,true);
+ for(const [i,duration] of [.01,.1,1,4].entries()){
+  assert.equal(voices[i].frequency.value,440*2**((36-69)/12));
+  assert.equal(voices[i].stopTime,2+Math.max(.025,duration));
+  assert.deepEqual(envelopes[i].at(-1),['linear',0,voices[i].stopTime]);
+  assert.ok(envelopes[i][1][2]-2<=.004001);
+  assert.ok(envelopes[i].every((e,j)=>j===0||e[2]>=envelopes[i][j-1][2]));
+  voices[i].onended();
+ }
+ assert.equal(engine.nodes.size,0);
+ engine.tone(81,0,.035,.08,'sine');assert.equal(voices.at(-1).type,'sine');
+ assert.equal(waves.length,1);assert.equal(voices.at(-1).stopTime,.065);
+});
+
+test('real sample provenance hashes and nearest-pitch transposition stay consistent',()=>{
+ const manifest=JSON.parse(readFileSync(new URL('../public/samples/bass/manifest.json',import.meta.url)));
+ assert.equal(manifest.license,'CC0-1.0');
+ for(const bank of Object.values(BASS_BANKS))for(const [midi,file] of bank){
+  assert.equal(createHash('sha256').update(readFileSync(new URL('../public/samples/bass/'+file,import.meta.url))).digest('hex'),manifest.sha256[file]);
+  const row=nearestBassSample(bank.map(([midi])=>({midi})),midi);assert.equal(row.midi,midi);
+ }
+ assert.equal(nearestBassSample([{midi:28},{midi:33},{midi:39}],23).midi,28);
+ assert.equal(nearestBassSample([],36),null);
 });

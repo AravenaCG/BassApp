@@ -216,7 +216,7 @@ test('practice selection changes notes, difficulty, sound clock and loops',async
  await page.waitForTimeout(1200);
  await expect(page.locator('#practice-fretboard rect')).not.toHaveCount(1);
  await page.locator('#practice-stop').click();
- await page.locator('.practice-settings').first().locator('summary').click();
+ await page.locator('details').filter({has:page.locator('#loop-to')}).locator('summary').click();
  await page.locator('#loop-to').selectOption('0');
  await page.locator('#practice-loop').check();
  await page.locator('#practice-increment').selectOption('5');

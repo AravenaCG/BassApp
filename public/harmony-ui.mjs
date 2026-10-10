@@ -1,5 +1,6 @@
 import {harmonyModules,harmonyUnits,unitsForLesson,nextHarmonyUnit,HARMONY_VERSION} from './harmony-curriculum.mjs';
 import {learningStore} from './learning-store.mjs';
+import {PracticeEngine} from './practice-engine.mjs';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const list=items=>`<ul>${items.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>`;
 const examples=u=>u.examples.map(e=>`<figure class="harmony-example"><figcaption>${esc(e.label)}</figcaption><ul>${e.notes.map(n=>`<li>${esc(n)}</li>`).join('')}</ul><p>${esc(e.why)}</p></figure>`).join('');
@@ -16,15 +17,13 @@ export class HarmonyAudio {
   this.stop();const run=this.run;this.onStop=onStop;
   this.context??=new (window.AudioContext||window.webkitAudioContext)();await this.context.resume();
   if(run!==this.run)return false;
+  this.voice??=new PracticeEngine();this.voice.context=this.context;this.voice.nodes=this.nodes;this.voice.volume=1;
+  await this.voice.prepareBass();if(run!==this.run)return false;
   const seconds=unit.id==='H16'?2:1,start=this.context.currentTime+.05;
   unit.listen.midi.forEach((event,i)=>{
    const pitches=Array.isArray(event)?event:[event];
    for(const midi of pitches){
-    const o=this.context.createOscillator(),g=this.context.createGain(),t=start+i*seconds;
-    o.type='triangle';o.frequency.value=440*2**((midi-69)/12);
-    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.16/pitches.length,t+.015);g.gain.exponentialRampToValueAtTime(.0001,t+seconds*.85);
-    o.connect(g);g.connect(this.context.destination);o.start(t);o.stop(t+seconds*.9);
-    this.nodes.add(o);o.onended=()=>{this.nodes.delete(o);o.disconnect();g.disconnect();};
+    this.voice.tone(midi,start+i*seconds,seconds*.85,.16/pitches.length);
    }
   });
   this.timer=setTimeout(()=>this.stop(),(unit.listen.midi.length*seconds+.15)*1000);
@@ -77,7 +76,7 @@ export function mountHarmony({onLesson,onPractice,onShow=()=>{},onStopOtherAudio
   host.querySelector('#harmony-review').onclick=()=>updateUnit(false);
   host.querySelector('#harmony-listen').onclick=async()=>{
    const status=host.querySelector('#harmony-audio-status');onStopOtherAudio();status.textContent='Reproduciendo ejemplo…';
-   try{const playing=await audio.play(current,()=>{status.textContent='Audio detenido. Cantá el ejemplo y comprobalo en tu instrumento.';});if(playing)status.textContent='Reproduciendo ejemplo…';}catch{status.textContent='No se pudo iniciar el audio. Volvé a pulsar Escuchar o usá las notas del ejemplo escrito.';}
+   try{const playing=await audio.play(current,()=>{status.textContent='Audio detenido. Cantá el ejemplo y comprobalo en tu instrumento.';});if(playing)status.textContent='Reproduciendo ejemplo · '+audio.voice.bassStatus;}catch{status.textContent='No se pudo iniciar el audio. Volvé a pulsar Escuchar o usá las notas del ejemplo escrito.';}
   };
   host.querySelector('#harmony-stop').onclick=()=>audio.stop();
   host.querySelector('#harmony-practice').onclick=()=>{audio.stop();onPractice(current.practice);};
