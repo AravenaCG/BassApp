@@ -1,9 +1,20 @@
 # Appbass — deployment plan
 
-Status: Validated — image-only publication authorized; mandatory Linux Docker gate runs in existing GitHub CI before Azure update.
+Status: Deployed — sampled bass image verified Healthy; public A/B audio tests passed.
 Updated: 2026-10-09.
 
 ## Validation proof — sampled bass release, 2026-10-09
+
+Deployment proof: application commit 9bc03e6a2c35c2926999a3923b6cc8622ab981a8,
+GitHub run https://github.com/AravenaCG/BassApp/actions/runs/38007948983 completed
+successfully, including Linux Docker tests/types/build and Azure image update.
+Azure latest ready revision appbass--0000018 is Healthy and receives 100% latest
+revision traffic. Existing identity remains None; deployment service principal
+retains Contributor on rg-appbass-prod, verified read-only, no roles changed.
+Public browser tests/bass-sound.spec.mjs: 3/3 passed (19.6s), including actual
+FLAC/WAV decoding and Web Audio offline rendering at the deployed endpoint.
+Endpoint: https://appbass.whiteground-636d0547.brazilsouth.azurecontainerapps.io/appbass.html
+No SQL connections, migrations or user updates executed in this sound release.
 
 User authorizes implementation, commit, push and deployment of real bass sounds
 and a labelled A/B comparison. azure-validate: 38/38 unit tests passed, TypeScript
