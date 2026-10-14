@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {ATLAS_FAMILIES,TONICS,atlasItem,atlasScore,searchAtlas,dailyChallenge,challengeURL,spellDegree,degreeOffset} from '../public/atlas-engine.mjs';
 import {atlasStaff,atlasMap} from '../public/atlas-ui.mjs';
 import {atlasTheory,atlasTheoryHTML} from '../public/atlas-theory.mjs';
+import {scaleSteps,movableShape,movableShapeSVG,connectionExercises,connectionSVG} from '../public/scale-patterns.mjs';
 test('every scale and arpeggio has distinct theory with concrete transposed examples and interval distances',()=>{
  for(const root of TONICS)for(const family of ATLAS_FAMILIES){const item=atlasItem(family.id,root),t=atlasTheory(item);
   assert.ok(t.construction.length>40);assert.ok(t.color.length>40);assert.ok(t.application.length>40);
@@ -52,4 +53,15 @@ test('daily challenge is deterministic, rotates, validates dates and shares the 
  assert.equal(url.hash,`#escalas?reto=modos&fecha=${c.date}`);
  for(const date of ['2026-02-30','not-a-date','<script>'])assert.throws(()=>dailyChallenge(date));
  assert.ok(TONICS.includes(dailyChallenge('1900-01-01').root));
+});
+test('movable scale shapes stay relative and connection drills cover the neck without absolute fret labels',()=>{
+ for(const id of ['major','pent-major','pent-minor','blues-minor','altered']){
+  const item=atlasItem(id,'Bb'),shape=movableShape(item,'electricBass');
+  assert.ok(shape.points.length>=item.pitches.length-1);assert.ok(shape.points.some(p=>p.role==='root'));
+  const svg=movableShapeSVG(item,'electricBass',3,'shape');assert.ok(svg.includes('UBICÁ AQUÍ LA TÓNICA'));assert.ok(!svg.includes('Si bemol'));
+  const exercises=connectionExercises(item,'electricBass');assert.equal(exercises.length,3);assert.ok(exercises.every(e=>e.route.length>4));
+  assert.ok(exercises.find(e=>e.id==='two-strings').route.some(p=>p.shift));assert.ok(connectionSVG(exercises[0],item).includes('SIN TONALIDAD NI TRASTE FIJO'));
+ }
+ assert.deepEqual(scaleSteps(atlasItem('pent-minor','A')).map(p=>p.offset),[0,3,5,7,10,12]);
+ assert.equal(movableShape(atlasItem('major'),'doubleBass'),null);assert.deepEqual(connectionExercises(atlasItem('major'),'doubleBass'),[]);
 });

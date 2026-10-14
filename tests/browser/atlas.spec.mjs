@@ -63,6 +63,17 @@ test('scale theory follows the selected family and tonic without overflowing on 
  await theory.getByText('Llevarla al bajo o contrabajo',{exact:true}).click();await expect(theory).toContainText('una sola tensión alterada');
 });
 
+test('scale dialog teaches a movable shape and three progressive fretboard connection exercises',async({page})=>{
+ await guest(page);await page.setViewportSize({width:390,height:844});await page.goto('/appbass.html#escalas');
+ await page.locator('#atlas-search').fill('Sib pentatónica');await page.locator('[data-atlas-family="pent-minor"]').click();
+ const lab=page.locator('.scale-pattern-lab');await expect(lab).toContainText('Mové el dibujo, no las distancias');await expect(lab).toContainText('Misma colección, otro centro');
+ await expect(lab.locator('[data-portable-shape] svg')).toHaveAttribute('aria-label',/sin notas ni números de traste/);
+ await lab.locator('[data-portable-label]').selectOption('degrees');await expect(lab.locator('[data-portable-degree="b3"] text').first()).toHaveText('b3');
+ await expect(lab.locator('[data-connection-exercise] option')).toHaveCount(3);await lab.locator('[data-connection-exercise]').selectOption('two-strings');await expect(lab).toContainText('unir dos zonas');
+ await lab.locator('[data-connection-next]').click();await expect(lab.locator('[data-connection-status]')).toContainText('Paso 1');
+ expect(await page.locator('#atlas-dialog').evaluate(d=>d.scrollWidth<=d.clientWidth+1)).toBe(true);
+});
+
 test('daily preference stays isolated by account and blocked storage is reported without breaking the atlas',async({page})=>{
  await page.addInitScript(()=>localStorage.setItem('appbass-tour-v1-another-person','seen'));
  let user=null;await page.route('**/api/**',r=>r.fulfill({json:new URL(r.request().url()).pathname==='/api/progress'?{completed:[],totalPoints:0,states:{},nextLessonId:'B01'}:{user,plan,reminder:false}}));

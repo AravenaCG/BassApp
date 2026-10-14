@@ -1,10 +1,12 @@
 import {activeRepertoire,backingTracks} from './repertoire.mjs';
 import {positions} from './fingering.mjs';
+import {walkingCatalog} from './walking-studies.mjs';
 import {bassSound,BASS_SOUNDS,BASS_BANKS,loadBassBank,nearestBassSample} from './bass-sounds.mjs';
 export const GENRES=[['rock','Rock','Pulso firme y notas cortas',[0,0,7,0]],['funk','Funk','Síncopas y silencios',[0,7,10,7]],['reggae','Reggae','Espacio y duración',[0,7,0,7]],['cumbia','Cumbia','Fundamental y quinta',[0,7,0,7]],['jazz','Jazz','Conectar notas del acorde',[0,4,7,10]],['blues','Blues','Forma de doce compases',[0,7,9,10]],['bossa','Bossa','Acompañamiento en dos',[0,7,0,7]],['pop','Pop','Motivos claros y repetición',[0,0,7,12]]];
 const genreItems=GENRES.map(([id,title,goal])=>({id:'genre-'+id,title:title+' · estudio original',goal,generated:'genre-'+id,group:'application',level:'basic',minutes:8}));
 export const GROUPS={technique:'Técnica',application:'Aplicación musical',songs:'Piezas originales',backing:'Pistas originales · samples CC0',standards:'Repertorio beta · ragtime'};
 export const catalog=[
+ ...walkingCatalog,
  {id:'open-strings',title:'Cuerdas al aire',group:'technique',level:'basic',minutes:5,goal:'Sostener el pulso y cambiar de cuerda',generated:'strings'},
  {id:'major-scale',title:'Escala de Do mayor',group:'technique',level:'basic',minutes:5,goal:'Reconocer notas y coordinar ambas manos',generated:'scale'},
  {id:'triads',title:'Tríadas mayores y menores',group:'technique',level:'basic',minutes:8,goal:'Escuchar la diferencia entre terceras',lesson:'B03',material:'concepto'},

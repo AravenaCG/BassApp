@@ -1,7 +1,26 @@
 # Appbass — deployment plan
 
 Status: Validated — avatar and scroll-aligned learning journey ready for CI/CD deployment.
-Updated: 2026-10-09.
+Updated: 2026-10-14.
+
+## Validation proof — walking studies and movable patterns, 2026-10-14
+
+Status: Validated for the existing GitHub Actions image-only pipeline.
+User requested commit, push and deployment without post-deployment monitoring.
+
+- `node --test tests/*.test.mjs`: 42/42 passed.
+- `npm.cmd run build:azure`: passed.
+- Playwright `tests/browser/walking.spec.mjs`: 1/1 passed against local production build;
+  all ten studies load notation, advice and PDF downloads; playback starts without page errors.
+- Ten PDFs verified and combined into a 30-page downloadable collection.
+- `git diff --check`: passed.
+- Static deployment review: existing push-to-main workflow updates only the Container App
+  image in rg-appbass-prod; no infrastructure, identity, RBAC or database changes.
+- Existing approved subscription and Brazil South target remain unchanged.
+- Provisioning/ACR managed-identity checks are not applicable to this GHCR image-only update.
+- No SQL migrations or orchestra data access performed. Local docs remain excluded.
+- Post-deployment verification deliberately omitted at the user's request; successful
+  push means the workflow is triggered, not proof of a completed deployment.
 
 ## Validation proof — artistic avatars and learning journey, 2026-10-09
 

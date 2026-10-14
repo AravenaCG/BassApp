@@ -4,6 +4,7 @@ import {parseMidi} from './midi-score.mjs';
 import {planFingering,routeHTML,stringNames} from './fingering.mjs';
 import {learningStore} from './learning-store.mjs';
 import {mountBassSound} from './bass-sound-ui.mjs';
+import {walkingScore,studyNotation,studyAdviceHTML,walkingCatalog} from './walking-studies.mjs';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const labels={basic:'Básico',intermediate:'Intermedio',advanced:'Avanzado'};
 const noteNames=['Do','Do♯','Re','Mi♭','Mi','Fa','Fa♯','Sol','La♭','La','Si♭','Si'];
@@ -45,6 +46,11 @@ export function mountPractice(host,{onLesson,onJournal}) {
     </details>`;
   const $=s=>host.querySelector(s);
   mountBassSound(host);
+  const studies=document.createElement('details');studies.className='practice-settings';studies.id='walking-library';
+  studies.innerHTML='<summary>Walking y acompañamiento · partituras PDF</summary><p>Dos estudios de blues y ocho líneas sobre tus partes de ensamble. Elegí una versión para escucharla, practicar sin bajo o descargar su partitura con guía.</p><div class="repertoire-grid">'+walkingCatalog.map(s=>`<article><h3>${esc(s.title)}</h3><div class="button-row"><button type="button" class="secondary" data-walking-study="${s.id}">Practicar</button><a class="secondary" href="${s.pdf}" download>Descargar PDF</a></div></article>`).join('')+'</div>';
+  host.append(studies);
+  studies.insertAdjacentHTML('beforeend','<p><a class="secondary" href="/practice-studies/todos-los-estudios.pdf" download>Descargar todos los estudios PDF</a></p>');
+  $('#practice-source').insertAdjacentHTML('afterend','<details class="practice-settings" id="walking-guide" hidden><summary>Cómo crear mi propio walking o acompañamiento</summary><div></div></details>');
   $('#practice-instrument').insertAdjacentHTML('beforeend','<option value="electricBass5">Bajo de cinco cuerdas · B–E–A–D–G</option>');
   $('#practice-source').insertAdjacentHTML('beforebegin','<details class="practice-route"><summary>Recorrido guiado por compás · notas y tablatura</summary><div id="practice-route-content"></div><button type="button" class="secondary" id="practice-print">Imprimir este compás</button></details>');
   let item,score,planned=[],positionMap=new Map(),shownBar=-1,instrument='electricBass',loadRun=0,storageKey='appbass-practice-guest',sessionSeconds=0,lastFrame=0,preferencesReady=false;
@@ -60,7 +66,7 @@ export function mountPractice(host,{onLesson,onJournal}) {
   learningStore.subscribe(async()=>{if(!learningStore.user||storageKey!=='appbass-practice-'+learningStore.user.id||!learningStore.ready)return;const pref=learningStore.preference('practice');if(!pref)return;preferencesReady=false;instrument=pref.instrument||instrument;$('#practice-instrument').value=instrument;$('#practice-difficulty').value=pref.difficulty||'roots';await load(pref.id||item?.id);if(pref.tempo){engine.tempo=pref.tempo;$('#practice-tempo').value=pref.tempo;}preferencesReady=true;});
   function choices(){
     const level=$('#practice-level').value;
-    $('#exercise-select').innerHTML=Object.entries(GROUPS).map(([k,label])=>`<optgroup label="${label}">${catalog.filter(c=>c.group===k&&(!level||c.level===level)).map(c=>`<option value="${c.id}">${esc(c.title)} · ${labels[c.level]} · ${c.minutes} min</option>`).join('')}</optgroup>`).join('');
+    $('#exercise-select').innerHTML=Object.entries({...GROUPS,'walking-studies':'Walking y acompañamiento · estudios PDF'}).map(([k,label])=>`<optgroup label="${label}">${catalog.filter(c=>c.group===k&&(!level||c.level===level)).map(c=>`<option value="${c.id}">${esc(c.title)} · ${labels[c.level]} · ${c.minutes} min</option>`).join('')}</optgroup>`).join('');
   }
   async function load(id){
     const run=++loadRun;engine.stop();lastFrame=0;sessionSeconds=0;
@@ -70,7 +76,8 @@ export function mountPractice(host,{onLesson,onJournal}) {
     $('#practice-source').textContent='';
     try {
       let next;
-      if(item.generated)next=generatedScore(item.generated==='strings'&&instrument==='electricBass5'?'strings5':item.generated,$('#practice-difficulty').value);
+      if(item.study)next=walkingScore(item.study,item.mode);
+      else if(item.generated)next=generatedScore(item.generated==='strings'&&instrument==='electricBass5'?'strings5':item.generated,$('#practice-difficulty').value);
       else if(item.midi){const r=await fetch(item.midi);if(!r.ok)throw Error();next=parseMidi(await r.arrayBuffer());}
       else {
         const base=`course/lessons/${item.lesson}/`;
@@ -94,6 +101,8 @@ export function mountPractice(host,{onLesson,onJournal}) {
       $('#practice-bars').innerHTML=score.bars.map((b,i)=>`<button type="button" class="chord-cell" data-bar="${i}" aria-label="Ir al compás ${i+1}"><small>${i+1}</small>${esc(b.chord||'—')}</button>`).join('');
       $('#practice-bars').querySelectorAll('button').forEach(b=>b.onclick=()=>engine.seek(score.bars[Number(b.dataset.bar)].beat));
       $('#practice-lesson').hidden=!item.lesson;$('#practice-score').innerHTML=renderScore(score);
+      $('#walking-guide').hidden=!item.study;
+      if(item.study){$('#practice-score').innerHTML=studyNotation(score);$('#walking-guide div').innerHTML=studyAdviceHTML(score.form);$('#walking-guide').open=true;$('#practice-source').innerHTML=`<a class="secondary" href="${item.pdf}" download>Descargar partitura PDF y guía</a>`;}
       $('#practice-play').disabled=false;$('#practice-status').textContent='Lista. Podés cambiar el tempo o elegir un fragmento.';
       draw(0);save();return true;
     } catch {if(run===loadRun)$('#practice-status').textContent='No pudimos cargar esta práctica. Elegí otra o volvé a seleccionarla.';return false;}
@@ -129,6 +138,7 @@ export function mountPractice(host,{onLesson,onJournal}) {
   $('#practice-play').onclick=toggle;
   $('#practice-stop').onclick=()=>{engine.stop();lastFrame=0;draw(engine.start);$('#practice-play').textContent='Reproducir';};
   $('#exercise-select').onchange=e=>load(e.target.value);
+  host.querySelectorAll('[data-walking-study]').forEach(button=>button.onclick=async()=>{$('#practice-level').value='';choices();await load(button.dataset.walkingStudy);$('#practice-play').focus();});
   $('#practice-level').onchange=()=>{choices();load($('#exercise-select').value);};
   $('#practice-difficulty').onchange=()=>load(item.id);
   $('#practice-instrument').onchange=e=>{instrument=e.target.value;if(item?.generated==='strings')void load(item.id);else{plan();draw(engine.position());}save();};

@@ -2,6 +2,7 @@ import {TONICS,ATLAS_FAMILIES,tonicInfo,atlasItem,atlasScore,searchAtlas,dailyCh
 import {PracticeEngine} from './practice-engine.mjs';
 import {atlasTheoryHTML} from './atlas-theory.mjs';
 import {mountRoute,tuning} from './fingering.mjs';
+import {mountScalePatterns} from './scale-patterns.mjs';
 import {learningStore} from './learning-store.mjs';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export function atlasStaff(item){
@@ -26,7 +27,7 @@ export function atlasMap(item,instrument='electricBass'){
 }
 export function mountAtlas({stopOtherAudio=()=>{}}={}){
  const section=document.querySelector('#escalas'),list=section.querySelector('#atlas-list'),search=section.querySelector('#atlas-search');
- const stylesheet=document.createElement('link');stylesheet.rel='stylesheet';stylesheet.href='atlas-ui.css?v=3';document.head.append(stylesheet);
+ const stylesheet=document.createElement('link');stylesheet.rel='stylesheet';stylesheet.href='atlas-ui.css?v=4';document.head.append(stylesheet);
  const routeStyle=document.createElement('link');routeStyle.rel='stylesheet';routeStyle.href='learning-tools.css?v=1';document.head.append(routeStyle);
  section.querySelector('.sub').textContent=`${ATLAS_FAMILIES.filter(f=>f.kind==='scale').length} familias de escalas y ${ATLAS_FAMILIES.filter(f=>f.kind==='arpeggio').length} de arpegios, transportables a las 12 alturas. Elegí la tónica o buscá, por ejemplo, «Sib pentatónica».`;
  const controls=document.createElement('div');controls.className='atlas-selectors';controls.innerHTML=`<label>Tónica<select id="atlas-tonic">${TONICS.map(r=>`<option value="${r}">${r} / ${esc(tonicInfo(r).latin)}</option>`).join('')}</select></label><label>Mostrar<select id="atlas-kind"><option value="all">Escalas y arpegios</option><option value="scale">Escalas</option><option value="arpeggio">Arpegios</option></select></label><label>Instrumento<select id="atlas-instrument"><option value="electricBass">Bajo eléctrico</option><option value="doubleBass">Contrabajo</option></select></label>`;
@@ -48,6 +49,10 @@ export function mountAtlas({stopOtherAudio=()=>{}}={}){
   stop();stopOtherAudio();selected=atlasItem(familyId,tonic);engine.load(atlasScore(selected));
   detail.innerHTML=`<div class="dialog-head"><p class="eyebrow">${selected.kind==='scale'?'ESCALA':'ARPEGIO'} · ${esc(selected.root)}</p><button id="atlas-close" class="icon-button" aria-label="Cerrar escala">×</button></div><h2>${esc(selected.title)}</h2><p>Grados: ${selected.degrees.map(esc).join(' · ')}</p><p id="atlas-notes">Notas: ${selected.pitches.map(p=>esc(p.latin)).join(' – ')}</p><div class="button-row"><button class="primary" id="atlas-play">Escuchar recorrido</button><button class="secondary" id="atlas-stop">Detener</button><label>Tempo (BPM)<input id="atlas-tempo" type="number" min="30" max="200" value="64"></label><label>Volumen<input id="atlas-volume" type="range" min="0" max="100" value="${Math.round(engine.volume*100)}"></label></div><p id="atlas-audio-status" role="status">Audio sintetizado ascendente y descendente. Ajustá el volumen antes de escuchar.</p><h3>Partitura · clave de fa</h3><div class="atlas-scroll">${atlasStaff(selected)}</div><p class="footnote">Altura escrita una octava por encima del sonido. Cada nota muestra su alteración explícita; no hay armadura. Deslizá la partitura horizontalmente en móvil.</p><h3>Mapa · ${section.querySelector('#atlas-instrument').value==='doubleBass'?'contrabajo':'bajo eléctrico'}</h3><div class="atlas-scroll">${atlasMap(selected,section.querySelector('#atlas-instrument').value)}</div><p class="footnote">${section.querySelector('#atlas-instrument').value==='doubleBass'?'Semitonos desde cada cuerda al aire: mapa conceptual, no distancias físicas ni digitación. Cambiá de posición según tu técnica.':'Ubicaciones en las cuatro cuerdas E–A–D–G; elegí un recorrido cómodo. No necesitás tocar todas las posiciones.'}</p>${selected.id==='melodic-minor'?'<p>Versión de jazz: los mismos grados al subir y bajar; no es la variante clásica descendente.</p>':''}<p>Escuchá la tónica como centro y compará los grados característicos. Transportar cambia las alturas, no la fórmula. Los patrones son originales de Appbass.</p>`;
   detail.querySelector('#atlas-audio-status').insertAdjacentHTML('afterend',atlasTheoryHTML(selected));
+  if(selected.kind==='scale'){
+   const patterns=document.createElement('section');patterns.className='scale-pattern-lab';detail.querySelector('.atlas-theory').after(patterns);
+   mountScalePatterns(patterns,selected,section.querySelector('#atlas-instrument').value);
+  }
   const mapTitle=[...detail.querySelectorAll('h3')].find(n=>n.textContent.startsWith('Mapa ·'));
   const allMap=mapTitle.nextElementSibling,mapNote=allMap.nextElementSibling,explore=document.createElement('details');
   explore.innerHTML='<summary>Explorar todas las ubicaciones · no es un recorrido</summary>';mapTitle.before(explore);explore.append(mapTitle,allMap,mapNote);
