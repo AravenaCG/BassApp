@@ -3,7 +3,7 @@ import {activeRepertoire} from './repertoire.mjs';
 import {parseMidi} from './midi-score.mjs';
 import {planFingering,routeHTML,stringNames} from './fingering.mjs';
 import {learningStore} from './learning-store.mjs';
-import {mountBassSound} from './bass-sound-ui.mjs';
+import {bassSoundForInstrument,setBassSound} from './bass-sounds.mjs';
 import {walkingScore,studyNotation,studyAdviceHTML,walkingCatalog} from './walking-studies.mjs';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const labels={basic:'Básico',intermediate:'Intermedio',advanced:'Avanzado'};
@@ -11,7 +11,7 @@ const noteNames=['Do','Do♯','Re','Mi♭','Mi','Fa','Fa♯','Sol','La♭','La',
 export function mountPractice(host,{onLesson,onJournal}) {
   host.innerHTML=`
     <div class="workspace-header"><div><p class="eyebrow">TU PRÁCTICA DE HOY</p><h2 id="exercise-title">Elegí tu práctica</h2><p id="exercise-goal"></p></div>
-    <label>Instrumento<select id="practice-instrument"><option value="electricBass">Bajo eléctrico</option><option value="doubleBass">Contrabajo</option></select></label></div>
+    <label>Instrumento<select id="practice-instrument"><option value="electricBass">Bajo eléctrico</option><option value="doubleBass">Contrabajo</option></select><small id="practice-sound-status">Sonido real · dedos</small></label></div>
     <div class="practice-options">
       <label>Nivel<select id="practice-level"><option value="">Todos</option><option value="basic">Básico</option><option value="intermediate">Intermedio</option><option value="advanced">Avanzado</option></select></label>
       <label>Elegir otra práctica<select id="exercise-select"></select></label>
@@ -45,7 +45,6 @@ export function mountPractice(host,{onLesson,onJournal}) {
       <p><a href="repertoire/README.md" target="_blank" rel="noopener">Procedencia, licencias y límites</a> · <a href="repertoire/asset-manifest.json" target="_blank" rel="noopener">Manifiesto verificable de archivos</a></p>
     </details>`;
   const $=s=>host.querySelector(s);
-  mountBassSound(host);
   const studies=document.createElement('details');studies.className='practice-settings';studies.id='walking-library';
   studies.innerHTML='<summary>Walking y acompañamiento · partituras PDF</summary><p>Dos estudios de blues y ocho líneas sobre tus partes de ensamble. Elegí una versión para escucharla, practicar sin bajo o descargar su partitura con guía.</p><div class="repertoire-grid">'+walkingCatalog.map(s=>`<article><h3>${esc(s.title)}</h3><div class="button-row"><button type="button" class="secondary" data-walking-study="${s.id}">Practicar</button><a class="secondary" href="${s.pdf}" download>Descargar PDF</a></div></article>`).join('')+'</div>';
   host.append(studies);
@@ -61,7 +60,7 @@ export function mountPractice(host,{onLesson,onJournal}) {
     if(lastFrame&&document.visibilityState==='visible')sessionSeconds+=Math.min(1,(performance.now()-lastFrame)/1000);
     lastFrame=performance.now();draw(beat);$('#practice-tempo').value=String(tempo);
   },()=>{lastFrame=0;$('#practice-play').textContent='Reproducir';$('#practice-status').textContent='Práctica terminada. Podés repetirla o guardarla en tu diario.';});
-  engine.onSoundStatus=value=>$('#bass-sound-status').textContent='Sonido activo: '+value;
+  engine.onSoundStatus=value=>$('#practice-sound-status').textContent='Sonido activo: '+value;
   function save(){if(!preferencesReady)return;const value={id:item?.id,tempo:engine.tempo,instrument,difficulty:$('#practice-difficulty').value};try{localStorage.setItem(storageKey,JSON.stringify(value));}catch{}if(learningStore.user&&storageKey==='appbass-practice-'+learningStore.user.id)learningStore.setPreference('practice',value).then(()=>$('#practice-status').textContent='Preferencias guardadas en tu cuenta.').catch(e=>$('#practice-status').textContent='No se guardó en la nube: '+e.message);}
   learningStore.subscribe(async()=>{if(!learningStore.user||storageKey!=='appbass-practice-'+learningStore.user.id||!learningStore.ready)return;const pref=learningStore.preference('practice');if(!pref)return;preferencesReady=false;instrument=pref.instrument||instrument;$('#practice-instrument').value=instrument;$('#practice-difficulty').value=pref.difficulty||'roots';await load(pref.id||item?.id);if(pref.tempo){engine.tempo=pref.tempo;$('#practice-tempo').value=pref.tempo;}preferencesReady=true;});
   function choices(){
@@ -73,7 +72,7 @@ export function mountPractice(host,{onLesson,onJournal}) {
     item=catalog.find(c=>c.id===id)||catalog[0];$('#exercise-select').value=item.id;
     $('#practice-play').disabled=true;$('#practice-play').textContent='Reproducir';$('#practice-status').textContent='Preparando práctica…';
     $('#difficulty-label').hidden=!item.generated||['strings','scale'].includes(item.generated);
-    $('#practice-source').textContent='';
+    $('#practice-source').textContent='';setBassSound(bassSoundForInstrument(instrument));engine.sound=bassSoundForInstrument(instrument);
     try {
       let next;
       if(item.study)next=walkingScore(item.study,item.mode);
@@ -141,7 +140,7 @@ export function mountPractice(host,{onLesson,onJournal}) {
   host.querySelectorAll('[data-walking-study]').forEach(button=>button.onclick=async()=>{$('#practice-level').value='';choices();await load(button.dataset.walkingStudy);$('#practice-play').focus();});
   $('#practice-level').onchange=()=>{choices();load($('#exercise-select').value);};
   $('#practice-difficulty').onchange=()=>load(item.id);
-  $('#practice-instrument').onchange=e=>{instrument=e.target.value;if(item?.generated==='strings')void load(item.id);else{plan();draw(engine.position());}save();};
+  $('#practice-instrument').onchange=e=>{instrument=e.target.value;setBassSound(bassSoundForInstrument(instrument));engine.sound=bassSoundForInstrument(instrument);$('#practice-sound-status').textContent=instrument==='doubleBass'?'Sonido real · contrabajo pizzicato':'Sonido real · bajo con dedos';if(item?.generated==='strings')void load(item.id);else{plan();draw(engine.position());}save();};
   $('#practice-tempo').onchange=e=>{const v=Number(e.target.value);if(!Number.isFinite(v))return;e.target.value=Math.max(30,Math.min(200,v));engine.configure({tempo:Number(e.target.value)});save();};
   $('#practice-volume').oninput=e=>engine.configure({volume:Number(e.target.value)/100});
   $('#practice-guide').onchange=e=>engine.configure({guide:e.target.checked});
@@ -181,7 +180,7 @@ export function mountPractice(host,{onLesson,onJournal}) {
       storageKey='appbass-practice-'+(user?.id||'guest');
       let pref;try{pref=JSON.parse(localStorage.getItem(storageKey)||'null');}catch{}
       preferencesReady=false;
-      const selected=pref?.instrument||user?.instrument;instrument=['electricBass','electricBass5','doubleBass'].includes(selected)?selected:'electricBass';$('#practice-instrument').value=instrument;
+      const selected=pref?.instrument||user?.instrument;instrument=['electricBass','electricBass5','doubleBass'].includes(selected)?selected:'electricBass';$('#practice-instrument').value=instrument;setBassSound(bassSoundForInstrument(instrument));engine.sound=bassSoundForInstrument(instrument);$('#practice-sound-status').textContent=instrument==='doubleBass'?'Sonido real · contrabajo pizzicato':'Sonido real · bajo con dedos';
       $('#practice-level').value='';choices();
       $('#practice-difficulty').value=pref?.difficulty||'roots';
       await load(pref?.id||(user?.level==='advanced'?'turnaround':user?.level==='intermediate'?'ii-v-i':'open-strings'));

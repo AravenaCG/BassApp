@@ -1,5 +1,6 @@
-export const BASS_SOUNDS={finger:'Bajo real · dedos',pick:'Bajo real · púa',upright:'Contrabajo real · pizzicato',synth:'Sintetizado · limpio'};
-export const BASS_BANKS={finger:[[28,'finger-28.flac'],[33,'finger-33.flac'],[39,'finger-39.flac']],pick:[[28,'pick-28.flac'],[33,'pick-33.flac'],[40,'pick-40.flac']],upright:[[31,'upright-31.wav'],[38,'upright-38.wav'],[48,'upright-48.wav']]};
+export const BASS_SOUNDS={finger:'Bajo real · dedos',upright:'Contrabajo real · pizzicato'};
+export const BASS_BANKS={finger:[[28,'finger-28.flac'],[33,'finger-33.flac'],[39,'finger-39.flac']],upright:[[31,'upright-31.wav'],[38,'upright-38.wav'],[48,'upright-48.wav']]};
+export const bassSoundForInstrument=instrument=>instrument==='doubleBass'?'upright':'finger';
 let selected;
 export function bassSound(){if(selected)return selected;try{selected=localStorage.getItem('appbass-bass-sound');}catch{}return selected in BASS_SOUNDS?selected:'finger';}
 export function setBassSound(value){selected=value in BASS_SOUNDS?value:'finger';try{localStorage.setItem('appbass-bass-sound',selected);}catch{}return selected;}

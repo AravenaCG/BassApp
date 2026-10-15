@@ -9,11 +9,12 @@ import {tourStop} from './tour.mjs';
 import {mountLearningTools} from './learning-tools.mjs';
 import {learningStore} from './learning-store.mjs';
 import {mountAtlas} from './atlas-ui.mjs';
+import {mountReading} from './reading-ui.mjs';
 'use strict';
 const $ = (s, root = document) => root.querySelector(s);
 const $$ = (s, root = document) => [...root.querySelectorAll(s)];
 const escapeHTML = value => String(value ?? '').replace(/assets\/audio\/oido\.wav/g,'el audio de la prueba').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const names = {inicio:'Inicio',curso:'Mi curso',practicar:'Practicar',escalas:'Escalas y patrones',desafios:'Desafíos',recompensas:'Recompensas',planes:'Planes',ayuda:'Cómo usar Appbass'};
+const names = {inicio:'Inicio',curso:'Mi curso',practicar:'Practicar',lectura:'Lectura',escalas:'Escalas y patrones',desafios:'Desafíos',recompensas:'Recompensas',planes:'Planes',ayuda:'Cómo usar Appbass'};
 const levels = {basic:'Básico',intermediate:'Intermedio',advanced:'Avanzado'};
 const toast = message => { $('#toast').textContent=message; $('#toast').classList.add('visible'); clearTimeout(toast.timeout); toast.timeout=setTimeout(()=>$('#toast').classList.remove('visible'),4000); };
 let progress = null, progressError = '', completionPending = false, currentLessonId = null;
@@ -42,6 +43,14 @@ document.addEventListener('course-space-change',()=>harmony.stop());
 function syncCourseSpace(){if(!location.hash.startsWith('#curso'))return;const query=new URLSearchParams(location.hash.split('?')[1]||'');courseSpaces.show(query.get('espacio')==='armonia'||/^H(0[1-9]|1[0-6])$/.test(query.get('unidad')||'')?'harmony':'journey');}
 window.addEventListener('hashchange',syncCourseSpace);syncCourseSpace();
 const scaleAtlas=mountAtlas({stopOtherAudio(){practice.stop();harmony.stop();}});
+const readingSection=document.createElement('section');readingSection.id='lectura';readingSection.className='page';readingSection.hidden=true;readingSection.innerHTML='<div class="section-head"><p class="eyebrow">LEER TAMBIÉN ES TOCAR</p><h1>Lectura en clave de fa</h1><p class="sub">Entrená el ojo, nombrá la nota y llevala al bajo o al contrabajo.</p></div><div id="reading-workspace"></div>';
+document.querySelector('.content').append(readingSection);
+const readingNav=document.createElement('a');readingNav.href='#lectura';readingNav.dataset.page='lectura';readingNav.innerHTML='<svg><use href="#book"/></svg>Lectura';document.querySelector('[data-page="escalas"]').before(readingNav);
+const navStyle=document.createElement('link');navStyle.rel='stylesheet';navStyle.href='navigation.css?v=1';document.head.append(navStyle);
+const mainNav=document.querySelector('.sidebar nav'),navLinks=new Map([...mainNav.querySelectorAll('a')].map(link=>[link.dataset.page,link]));
+mainNav.replaceChildren(navLinks.get('inicio'));
+for(const [group,pages] of [['APRENDER',['curso','lectura']],['PRACTICAR',['practicar']],['EXPLORAR',['escalas']],['COMPARTIR',['desafios']],['AYUDA',['ayuda']]]){const label=document.createElement('span');label.className='nav-group-title';label.textContent=group;mainNav.append(label,...pages.map(page=>navLinks.get(page)).filter(Boolean));}
+const reading=mountReading(readingSection.querySelector('#reading-workspace'));
 document.addEventListener('bass-audition-start',()=>{practice.stop();harmony.stop();scaleAtlas.stop();learningTools.stop();document.querySelectorAll('audio').forEach(a=>a.pause());});
 document.addEventListener('click',e=>{if(e.target.closest('#atlas-play,#harmony-listen,#ear-listen'))document.dispatchEvent(new Event('bass-audition-stop'));});
 const learningTools=mountLearningTools({stopOtherAudio(){practice.stop();harmony.stop();scaleAtlas.stop();},async onPractice(id){learningTools.stop();await practice.selectExercise(id);location.hash='practicar';navigate();workspace.scrollIntoView({block:'start'});},onLesson:openLesson});
