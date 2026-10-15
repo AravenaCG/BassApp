@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Appbass · Bajo y contrabajo",
+  title: "BassApp · Bajo y contrabajo",
   description: "Jazz, blues, lecciones y práctica para bajo y contrabajo.",
   other: {
     "codex-preview": "development",
