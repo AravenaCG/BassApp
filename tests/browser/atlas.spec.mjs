@@ -70,6 +70,7 @@ test('scale dialog teaches a movable shape and three progressive fretboard conne
  await expect(lab.locator('[data-portable-shape] svg')).toHaveAttribute('aria-label',/sin notas ni números de traste/);
  await lab.locator('[data-portable-label]').selectOption('degrees');await expect(lab.locator('[data-portable-degree="b3"] text').first()).toHaveText('b3');
  await expect(lab.locator('[data-connection-exercise] option')).toHaveCount(3);await lab.locator('[data-connection-exercise]').selectOption('two-strings');await expect(lab).toContainText('unir dos zonas');
+ await expect(lab.locator('[data-pattern-tempo]')).toHaveText('64 BPM');await lab.locator('[data-tempo-step="5"]').click();await expect(page.locator('#atlas-tempo')).toHaveValue('69');await expect(lab.locator('[data-pattern-tempo]')).toHaveText('69 BPM');
  await lab.locator('[data-connection-next]').click();await expect(lab.locator('[data-connection-status]')).toContainText('Paso 1');
  expect(await page.locator('#atlas-dialog').evaluate(d=>d.scrollWidth<=d.clientWidth+1)).toBe(true);
 });

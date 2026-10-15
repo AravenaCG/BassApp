@@ -29,7 +29,8 @@ button.avatar { border:1px solid #46707d; cursor:pointer }
 .practice-bars button { min-width:55px; color:var(--text) }
 .practice-transport { display:flex; flex-wrap:wrap; gap:16px; align-items:end; padding:24px; background:#101a29; border-block:1px solid var(--line) }
 .practice-transport input[type=number] { width:95px; margin:0 }
-.practice-transport input[type=range] { width:120px }
+.practice-transport input[type=range] { width:180px; min-width:180px; margin:0; accent-color:var(--cyan) }
+input[type=range] { box-sizing:border-box; max-width:100%; }
 .practice-transport .check { display:flex; align-self:center }
 .practice-settings { margin:20px 24px }
 .practice-settings p { color:var(--muted); font-size:13px }
