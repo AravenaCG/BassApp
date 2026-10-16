@@ -10,13 +10,12 @@ import {mountLearningTools} from './learning-tools.mjs';
 import {learningStore} from './learning-store.mjs';
 import {mountAtlas} from './atlas-ui.mjs';
 import {mountReading} from './reading-ui.mjs';
+import {ATLAS_FAMILIES,TONICS} from './atlas-engine.mjs';
 'use strict';
 const $ = (s, root = document) => root.querySelector(s);
 const $$ = (s, root = document) => [...root.querySelectorAll(s)];
 const escapeHTML = value => String(value ?? '').replace(/assets\/audio\/oido\.wav/g,'el audio de la prueba').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const names = {inicio:'Inicio',curso:'Mi curso',practicar:'Practicar',lectura:'Lectura',escalas:'Escalas y patrones',desafios:'Desafíos',recompensas:'Recompensas',planes:'Planes',ayuda:'Cómo usar BassApp'};
-function applyBrandName(){const replace=node=>{if(node.nodeType===Node.TEXT_NODE&&node.nodeValue.includes('Appbass'))node.nodeValue=node.nodeValue.replaceAll('Appbass','BassApp');else if(node.nodeType===Node.ELEMENT_NODE&&node.tagName!=='SCRIPT'&&node.tagName!=='STYLE')node.childNodes.forEach(replace);};replace(document.body);const brand=document.querySelector('.brand');if(brand?.childNodes[1]?.nodeType===Node.TEXT_NODE&&brand.childNodes[1].nodeValue!=='BassApp')brand.childNodes[1].nodeValue='BassApp';const title=document.title.replaceAll('Appbass','BassApp');if(title!==document.title)document.title=title;document.querySelector('#auth-dialog')?.setAttribute('aria-label','Acceso a BassApp');}
-applyBrandName();new MutationObserver(()=>applyBrandName()).observe(document.body,{subtree:true,childList:true,characterData:true});new MutationObserver(()=>applyBrandName()).observe(document.head,{subtree:true,childList:true,characterData:true});
 const levels = {basic:'Básico',intermediate:'Intermedio',advanced:'Avanzado'};
 const toast = message => { $('#toast').textContent=message; $('#toast').classList.add('visible'); clearTimeout(toast.timeout); toast.timeout=setTimeout(()=>$('#toast').classList.remove('visible'),4000); };
 let progress = null, progressError = '', completionPending = false, currentLessonId = null;
@@ -37,7 +36,8 @@ function audioAsset(object,id,base){const path=assetPath(object,id,base);return 
 let currentUser=null;
 const help=mountHelp();
 const workspace=document.createElement('article');workspace.className='workspace';
-$('#workspace-home').append(workspace);
+$('#workspace-practice').append(workspace);
+$('#workspace-home').innerHTML='<section class="card home-actions"><h2>¿Qué querés trabajar hoy?</h2><p>Continuá tu curso o reservá diez minutos para tocar.</p><div class="button-row"><button class="primary" id="home-continue">Continuar mi lección</button><button class="secondary" id="home-ten-minutes">Practicar 10 minutos</button></div><p id="home-action-status" role="status"></p></section>';
 const practice=mountPractice(workspace,{onLesson:openLesson,onJournal:entry=>account.openJournal(entry)});
 const courseSpaces=mountCourseSpaces();
 const harmony=mountHarmony({onLesson:openLesson,onShow:()=>courseSpaces.show('harmony'),onStopOtherAudio:()=>practice.stop(),async onPractice(id){await practice.selectExercise(id);location.hash='practicar';navigate();}});
@@ -46,13 +46,14 @@ function syncCourseSpace(){if(!location.hash.startsWith('#curso'))return;const q
 window.addEventListener('hashchange',syncCourseSpace);syncCourseSpace();
 const scaleAtlas=mountAtlas({stopOtherAudio(){practice.stop();harmony.stop();}});
 const readingSection=document.createElement('section');readingSection.id='lectura';readingSection.className='page';readingSection.hidden=true;readingSection.innerHTML='<div class="section-head"><p class="eyebrow">LEER TAMBIÉN ES TOCAR</p><h1>Lectura en clave de fa</h1><p class="sub">Entrená el ojo, nombrá la nota y llevala al bajo o al contrabajo.</p></div><div id="reading-workspace"></div>';
-document.querySelector('.content').append(readingSection);
+document.querySelector('.content > footer').before(readingSection);
 const readingNav=document.createElement('a');readingNav.href='#lectura';readingNav.dataset.page='lectura';readingNav.innerHTML='<svg><use href="#book"/></svg>Lectura';document.querySelector('[data-page="escalas"]').before(readingNav);
 const navStyle=document.createElement('link');navStyle.rel='stylesheet';navStyle.href='navigation.css?v=1';document.head.append(navStyle);
 const mainNav=document.querySelector('.sidebar nav'),navLinks=new Map([...mainNav.querySelectorAll('a')].map(link=>[link.dataset.page,link]));
 mainNav.replaceChildren(navLinks.get('inicio'));
 for(const [group,pages] of [['APRENDER',['curso','lectura']],['PRACTICAR',['practicar']],['EXPLORAR',['escalas']],['COMPARTIR',['desafios']],['AYUDA',['ayuda']]]){const label=document.createElement('span');label.className='nav-group-title';label.textContent=group;mainNav.append(label,...pages.map(page=>navLinks.get(page)).filter(Boolean));}
 const reading=mountReading(readingSection.querySelector('#reading-workspace'));
+document.addEventListener('reading-return',e=>{location.hash='curso';void openLesson(e.detail);});
 document.addEventListener('bass-audition-start',()=>{practice.stop();harmony.stop();scaleAtlas.stop();learningTools.stop();document.querySelectorAll('audio').forEach(a=>a.pause());});
 document.addEventListener('click',e=>{if(e.target.closest('#atlas-play,#harmony-listen,#ear-listen'))document.dispatchEvent(new Event('bass-audition-stop'));});
 const learningTools=mountLearningTools({stopOtherAudio(){practice.stop();harmony.stop();scaleAtlas.stop();},async onPractice(id){learningTools.stop();await practice.selectExercise(id);location.hash='practicar';navigate();workspace.scrollIntoView({block:'start'});},onLesson:openLesson});
@@ -64,6 +65,8 @@ const account=mountAccount({
   onPractice(){location.hash='practicar';navigate();},
   onLesson:openLesson
 });
+$('#home-continue').onclick=async()=>{const button=$('#home-continue');button.disabled=true;try{if(currentUser&&!progress)await loadProgress();if(currentUser&&!progress)throw Error(progressError||'Tu avance todavía no está disponible.');const data=await getCourse();const next=data.levels.flatMap(l=>l.lessons).find(l=>!progress?.completed.includes(l.lessonId));location.hash='curso';await openLesson(next?.lessonId||'B01');}catch(e){$('#home-action-status').textContent=e.message;}finally{button.disabled=false;}};
+$('#home-ten-minutes').onclick=()=>{location.hash='practicar';const minutes=$('#study-minutes');minutes.value='10';minutes.dispatchEvent(new Event('change'));$('#learning-tools').scrollIntoView({block:'start'});$('#study-timer').focus();};
 $$('[data-page="recompensas"]').forEach(a=>a.hidden=true);
 $('.plan-link').hidden=true;
 const referralCard=$('.community-bottom .card:last-child');
@@ -118,6 +121,11 @@ async function openLesson(id){
    <details><summary>Ver respuestas</summary>${readingText(data.earTraining.trials)}</details>${readingText(data.selfAssessment)}<div id="quick-quiz" class="quiz"></div></details>
    <section class="lesson-completion" id="completion-panel"></section>`;
   renderCompletion(id);renderQuiz(id);
+  const connections=document.createElement('section');connections.className='lesson-connections';
+  connections.innerHTML='<h3>Llevá esta lección a la práctica</h3><p>Usá el acompañamiento de la lección, repasá lectura o explorá una escala con su tónica.</p><div class="button-row"><button class="secondary" data-lesson-reading>Practicar lectura</button></div><div class="button-row"><label>Escala o arpegio<select data-lesson-scale>'+ATLAS_FAMILIES.map(f=>'<option value="'+f.id+'">'+escapeHTML(f.name||f.id)+'</option>').join('')+'</select></label><label>Tónica<select data-lesson-tonic>'+TONICS.map(t=>'<option>'+escapeHTML(t)+'</option>').join('')+'</select></label><button class="secondary" data-lesson-atlas>Ver partitura y patrón</button></div>';
+  $('#lesson-to-player').parentElement.after(connections);
+  connections.querySelector('[data-lesson-reading]').onclick=()=>{dialog.close();reading.openLesson(id);location.hash='lectura';};
+  connections.querySelector('[data-lesson-atlas]').onclick=()=>{const family=connections.querySelector('[data-lesson-scale]').value,tonic=connections.querySelector('[data-lesson-tonic]').value;dialog.close();location.hash='escalas';scaleAtlas.open(family,tonic);};
   $$('[data-harmony-open]',$('#detail-content')).forEach(b=>b.onclick=()=>{dialog.close();harmony.open(b.dataset.harmonyOpen);});
   $('#lesson-to-player').onclick=async()=>{dialog.close();await practice.selectLesson(id);location.hash='practicar';navigate();if(!catalog.some(c=>c.lesson===id))toast('Elegí una práctica del catálogo para aplicar el concepto.');};
   $$('[data-state]',$('#detail-content')).forEach(b=>b.onclick=async()=>{if(!currentUser)return account.openAuth();try{await api('/api/activity',{kind:'lesson',lessonId:id,state:b.dataset.state});await loadProgress();$$('[data-state]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));toast('Estado guardado.');}catch(e){toast(e.message);}});
@@ -148,20 +156,20 @@ $('#detail-dialog').addEventListener('close',()=>{$$('audio',$('#detail-dialog')
 
 function renderAtlas(){scaleAtlas.render();}
 
-function showIncoming(){const query=new URLSearchParams(location.hash.split('?')[1]||'');const type=query.get('reto'),sender=query.get('de')?.slice(0,40);const challenge=challengeTypes[type];$('#incoming-challenge').innerHTML=challenge?`<article class="card incoming"><p class="eyebrow">${sender?escapeHTML(sender.toUpperCase())+' TE INVITA':'TENÉS UN DESAFÍO'}</p><h2>${escapeHTML(challenge.title)}</h2><p>${escapeHTML(challenge.text)}</p><a class="primary" href="#practicar">Abrir acompañamiento</a><p class="footnote">Compartí tu grabación con quien te invitó. En esta beta no se envían respuestas ni se acreditan puntos dentro de Appbass.</p></article>`:'';}
+function showIncoming(){const query=new URLSearchParams(location.hash.split('?')[1]||'');const type=query.get('reto'),sender=query.get('de')?.slice(0,40);const challenge=challengeTypes[type];$('#incoming-challenge').innerHTML=challenge?`<article class="card incoming"><p class="eyebrow">${sender?escapeHTML(sender.toUpperCase())+' TE INVITA':'TENÉS UN DESAFÍO'}</p><h2>${escapeHTML(challenge.title)}</h2><p>${escapeHTML(challenge.text)}</p><a class="primary" href="#practicar">Abrir acompañamiento</a><p class="footnote">Compartí tu grabación con quien te invitó. En esta beta no se envían respuestas ni se acreditan puntos dentro de BassApp.</p></article>`:'';}
 $$('[data-challenge]').forEach(b=>b.addEventListener('click',()=>{selectedChallenge=b.dataset.challenge;$('#share-title').textContent=challengeTypes[selectedChallenge].title;$('#share-result').hidden=true;$('#share-dialog').showModal();}));
 $('#close-share').addEventListener('click',()=>$('#share-dialog').close());
 $('#make-link').addEventListener('click',()=>{const url=new URL(location.href);url.hash='desafios?'+new URLSearchParams({reto:selectedChallenge,...($('#sender-name').value.trim()?{de:$('#sender-name').value.trim()}:{})});$('#share-link').value=url.href;$('#share-result').hidden=false;});
 $('#copy-link').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('#share-link').value);toast('Enlace copiado. Ya podés enviarlo.');}catch{$('#share-link').select();toast('Seleccionamos el enlace. Copialo para compartir.');}});
-$('#native-share').addEventListener('click',async()=>{if(navigator.share){try{await navigator.share({title:'Appbass · '+challengeTypes[selectedChallenge].title,text:'¿Hacemos este desafío musical?',url:$('#share-link').value});}catch(error){if(error.name!=='AbortError')toast('No se pudo compartir. Copiá el enlace.');}}else $('#copy-link').click();});
+$('#native-share').addEventListener('click',async()=>{if(navigator.share){try{await navigator.share({title:'BassApp · '+challengeTypes[selectedChallenge].title,text:'¿Hacemos este desafío musical?',url:$('#share-link').value});}catch(error){if(error.name!=='AbortError')toast('No se pudo compartir. Copiá el enlace.');}}else $('#copy-link').click();});
 
 let recorder,recordStream,recordChunks=[],recording=false,recordTimeout,recordObjectURL;
 const localTakes=[];
 async function stopRecording(){if(recorder&&recorder.state!=='inactive')recorder.stop();clearTimeout(recordTimeout);}
-$('#record').addEventListener('click',async()=>{if(recording){stopRecording();return;}if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){toast('Tu navegador no permite grabar audio acá. Usá la grabadora del dispositivo.');return;}$('#record').disabled=true;try{recordStream=await navigator.mediaDevices.getUserMedia({audio:true});recordChunks=[];recorder=new MediaRecorder(recordStream);recorder.ondataavailable=e=>{if(e.data.size)recordChunks.push(e.data);};recorder.onstop=()=>{recordStream.getTracks().forEach(t=>t.stop());recording=false;$('#record').textContent='Grabar otra toma';$('#record-status').textContent='Toma lista. No se subió a ningún servidor.';recordObjectURL=URL.createObjectURL(new Blob(recordChunks,{type:recorder.mimeType}));const extension=recorder.mimeType.includes('mp4')?'m4a':recorder.mimeType.includes('ogg')?'ogg':'webm';localTakes.push({url:recordObjectURL,extension});if(localTakes.length>2)URL.revokeObjectURL(localTakes.shift().url);$('#record-result').innerHTML=localTakes.map((take,i)=>`<article><h4>Toma ${i+1}</h4><audio controls src="${take.url}" aria-label="Escuchar toma ${i+1}"></audio><a class="secondary" href="${take.url}" download="Appbass-toma-${i+1}.${take.extension}">Descargar</a></article>`).join('');};recorder.start();recording=true;$('#record').textContent='Detener grabación';$('#record-status').textContent='Grabando · Máximo 3 minutos';recordTimeout=setTimeout(stopRecording,180000);}catch{recordStream?.getTracks().forEach(t=>t.stop());toast('No pudimos acceder al micrófono. Revisá el permiso del navegador.');}finally{$('#record').disabled=false;}});
+$('#record').addEventListener('click',async()=>{if(recording){stopRecording();return;}if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){toast('Tu navegador no permite grabar audio acá. Usá la grabadora del dispositivo.');return;}$('#record').disabled=true;try{recordStream=await navigator.mediaDevices.getUserMedia({audio:true});recordChunks=[];recorder=new MediaRecorder(recordStream);recorder.ondataavailable=e=>{if(e.data.size)recordChunks.push(e.data);};recorder.onstop=()=>{recordStream.getTracks().forEach(t=>t.stop());recording=false;$('#record').textContent='Grabar otra toma';$('#record-status').textContent='Toma lista. No se subió a ningún servidor.';recordObjectURL=URL.createObjectURL(new Blob(recordChunks,{type:recorder.mimeType}));const extension=recorder.mimeType.includes('mp4')?'m4a':recorder.mimeType.includes('ogg')?'ogg':'webm';localTakes.push({url:recordObjectURL,extension});if(localTakes.length>2)URL.revokeObjectURL(localTakes.shift().url);$('#record-result').innerHTML=localTakes.map((take,i)=>`<article><h4>Toma ${i+1}</h4><audio controls src="${take.url}" aria-label="Escuchar toma ${i+1}"></audio><a class="secondary" href="${take.url}" download="BassApp-toma-${i+1}.${take.extension}">Descargar</a></article>`).join('');};recorder.start();recording=true;$('#record').textContent='Detener grabación';$('#record-status').textContent='Grabando · Máximo 3 minutos';recordTimeout=setTimeout(stopRecording,180000);}catch{recordStream?.getTracks().forEach(t=>t.stop());toast('No pudimos acceder al micrófono. Revisá el permiso del navegador.');}finally{$('#record').disabled=false;}});
 window.addEventListener('pagehide',()=>{recordStream?.getTracks().forEach(t=>t.stop());localTakes.forEach(t=>URL.revokeObjectURL(t.url));});
 
-function navigate(){const requested=location.hash.replace(/^#/,'').split('?')[0]||'inicio';page=names[requested]?requested:'inicio';$$('.page').forEach(section=>section.hidden=section.id!==page);$$('[data-page]').forEach(a=>{a.classList.toggle('active',a.dataset.page===page);if(a.dataset.page===page)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});$('#page-name').textContent=names[page];if(page==='inicio'||page==='practicar')$('#workspace-'+(page==='inicio'?'home':'practice')).append(workspace);if(page==='curso')renderCourse();if(page==='escalas')renderAtlas();if(page==='desafios')showIncoming();document.title=`Appbass · ${names[page]}`;}
+function navigate(){const requested=location.hash.replace(/^#/,'').split('?')[0]||'inicio';page=names[requested]?requested:'inicio';$$('.page').forEach(section=>section.hidden=section.id!==page);$$('[data-page]').forEach(a=>{a.classList.toggle('active',a.dataset.page===page);if(a.dataset.page===page)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});$('#page-name').textContent=names[page];if(page==='curso')renderCourse();if(page==='escalas')renderAtlas();if(page==='desafios')showIncoming();document.title=`BassApp · ${names[page]}`;}
 window.addEventListener('hashchange',navigate);navigate();void account.refresh();
 function renderPoints(){
  const pill=$('#points-pill');

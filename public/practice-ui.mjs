@@ -39,7 +39,7 @@ export function mountPractice(host,{onLesson,onJournal}) {
     <div class="workspace-bottom"><button class="secondary" id="practice-lesson">Abrir lección</button><button class="secondary" id="practice-journal">Guardar práctica en mi diario</button><span id="practice-status" role="status"></span></div>
     <p class="practice-legend">Colores por función respecto del acorde: <span>● Fundamental</span> · <span>● Tercera</span> · <span>● Quinta</span> · <span>● Séptima</span> · <span>● Otras / sin armonía indicada</span></p>
     <details class="practice-settings" id="repertoire-library"><summary>Repertorio beta · partituras y fuentes</summary>
-      <p>Seis obras históricas de jazz y ragtime. Las partituras son para piano, no partes originales de bajo. Los títulos de Morton abren fuentes externas y todavía no tienen audio sincronizado en Appbass.</p>
+      <p>Seis obras históricas de jazz y ragtime. Las partituras son para piano, no partes originales de bajo. Los títulos de Morton abren fuentes externas y todavía no tienen audio sincronizado en BassApp.</p>
       <div class="repertoire-grid">${activeRepertoire().map(r=>`<article data-collection="${r.collection}" data-repertoire-id="${r.id}"><span class="eyebrow">REPERTORIO BETA</span><h3>${esc(r.title)}</h3><p>${esc(r.composer)} · ${esc(r.edition)}</p><p>${esc(r.status)}</p><p>${esc(r.license)}</p><a href="${esc(r.source)}" target="_blank" rel="noopener noreferrer">Fuente y condiciones ↗</a>${r.pdf?` · <a href="${r.pdf}" target="_blank" rel="noopener">Partitura completa PDF</a><div class="button-row"><button class="primary" data-listen-repertoire="${r.id}">Escuchar tema</button><button class="secondary" data-play-repertoire="${r.id}">Practicar reducción de bajo</button></div><p role="status" data-repertoire-status="${r.id}"></p>`:''}</article>`).join('')}</div>
       <p>Elegí las ediciones históricas señaladas, no cualquier arreglo moderno de la misma página. Dominio público no equivale a ausencia de obligaciones en todos los países; en Argentina puede aplicar el dominio público pagante.</p>
       <p><a href="repertoire/README.md" target="_blank" rel="noopener">Procedencia, licencias y límites</a> · <a href="repertoire/asset-manifest.json" target="_blank" rel="noopener">Manifiesto verificable de archivos</a></p>
@@ -55,7 +55,7 @@ export function mountPractice(host,{onLesson,onJournal}) {
   let item,score,planned=[],positionMap=new Map(),shownBar=-1,instrument='electricBass',loadRun=0,storageKey='appbass-practice-guest',sessionSeconds=0,lastFrame=0,preferencesReady=false;
   function plan(){planned=planFingering(score?.notes||[],instrument);positionMap=new Map((score?.notes||[]).map((n,i)=>[n,planned[i]]));shownBar=-1;}
   function pos(n){return positionMap.get(n)||playablePosition(n.midi,instrument);}
-  $('#practice-print').onclick=()=>{const sheet=document.createElement('section');sheet.id='bass-print-sheet';sheet.innerHTML='<h1>Appbass · '+esc(item.title)+'</h1>'+$('#practice-route-content').innerHTML;document.querySelector('#bass-print-sheet')?.remove();document.body.append(sheet);window.print();};
+  $('#practice-print').onclick=()=>{const sheet=document.createElement('section');sheet.id='bass-print-sheet';sheet.innerHTML='<h1>BassApp · '+esc(item.title)+'</h1>'+$('#practice-route-content').innerHTML;document.querySelector('#bass-print-sheet')?.remove();document.body.append(sheet);window.print();};
   const engine=new PracticeEngine((beat,tempo)=>{
     if(lastFrame&&document.visibilityState==='visible')sessionSeconds+=Math.min(1,(performance.now()-lastFrame)/1000);
     lastFrame=performance.now();draw(beat);$('#practice-tempo').value=String(tempo);
@@ -92,8 +92,8 @@ export function mountPractice(host,{onLesson,onJournal}) {
       $('#practice-mix option[value="original"]').hidden=!item.midi;
       if(!item.midi&&engine.mix==='original')setMix('full');
       $('#exercise-title').textContent=item.title;$('#exercise-goal').textContent=item.goal;
-      $('#practice-source').innerHTML=item.midi?`Repertorio beta · ${esc(item.edition)}. Reducción automática: los graves se adaptan al registro del bajo; el resto del piano forma el acompañamiento. Sin cifrado inferido. Tempo fijo de estudio. <a href="${item.pdf}" target="_blank" rel="noopener">Ver partitura original completa</a>`:item.group==='backing'?'Acompañamiento original de Appbass con samples CC0 de Versilian Studios. No contiene pistas ni datos de iReal Pro.':'';
-      $('#practice-description').textContent=`${labels[item.level]} · ${item.minutes} min sugeridos · ${score.bars.length} compases${item.group==='songs'?' · Composición original de Appbass':''}`;
+      $('#practice-source').innerHTML=item.midi?`Repertorio beta · ${esc(item.edition)}. Reducción automática: los graves se adaptan al registro del bajo; el resto del piano forma el acompañamiento. Sin cifrado inferido. Tempo fijo de estudio. <a href="${item.pdf}" target="_blank" rel="noopener">Ver partitura original completa</a>`:item.group==='backing'?'Acompañamiento original de BassApp con samples CC0 de Versilian Studios. No contiene pistas ni datos de iReal Pro.':'';
+      $('#practice-description').textContent=`${labels[item.level]} · ${item.minutes} min sugeridos · ${score.bars.length} compases${item.group==='songs'?' · Composición original de BassApp':''}`;
       $('#practice-tempo').value=score.tempo;
       const opts=score.bars.map((b,i)=>`<option value="${i}">${i+1}</option>`).join('');
       $('#loop-from').innerHTML=opts;$('#loop-to').innerHTML=opts;$('#loop-to').value=String(score.bars.length-1);

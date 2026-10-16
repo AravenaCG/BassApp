@@ -51,6 +51,6 @@ export function mountRoute(host,notes,instrument='electricBass',onStep=()=>{},ti
  function highlight(index){host.querySelectorAll('[data-route-step]').forEach(n=>n.classList.toggle('route-active',Number(n.dataset.routeStep)===index+1));host.querySelectorAll('[data-route-steps]').forEach(n=>n.classList.toggle('route-active',n.dataset.routeSteps.split(' ').includes(String(index+1))));onStep(index);}
  host.querySelector('[data-route-start]').onchange=e=>{start=Number(e.target.value);render();};host.querySelector('[data-route-label]').onchange=e=>{label=e.target.value;render();};
  host.querySelector('[data-route-next]').onclick=()=>{highlight(step);host.querySelector('[data-route-status]').textContent=`Paso ${step+1}: ${route[step]?.symbol||route[step]?.midi} · cuerda ${stringNames(instrument)[route[step]?.string]} · ${route[step]?.fret}`;step=(step+1)%Math.max(1,route.length);};
- host.querySelector('[data-route-print]').onclick=()=>{const sheet=document.createElement('section');sheet.id='bass-print-sheet';sheet.innerHTML='<h1>Appbass · '+esc(title)+'</h1>'+routeHTML(route,instrument,label);document.querySelector('#bass-print-sheet')?.remove();document.body.append(sheet);window.print();};
+ host.querySelector('[data-route-print]').onclick=()=>{const sheet=document.createElement('section');sheet.id='bass-print-sheet';sheet.innerHTML='<h1>BassApp · '+esc(title)+'</h1>'+routeHTML(route,instrument,label);document.querySelector('#bass-print-sheet')?.remove();document.body.append(sheet);window.print();};
  render();return {highlight,route:()=>route};
 }

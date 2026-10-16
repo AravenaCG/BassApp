@@ -23,7 +23,7 @@ export function mountAccount({onSession,onProgress,onPractice,onLesson,onReady=(
       <label data-register>Código de habilitación<input name="inviteCode" maxlength="128" autocomplete="off"><small>El código que recibiste para participar en la beta.</small></label>
       <label data-register>Si tu bajo pudiera reservarte un momento esta semana, ¿cuánto tiempo te gustaría compartir con él?
         <select name="weeklyStudyMinutes"><option value="15">15 minutos</option><option value="30">30 minutos</option><option value="60" selected>1 hora</option><option value="120">2 horas</option><option value="240">4 horas</option><option value="360">6 horas</option><option value="600">10 horas</option></select></label>
-      <label data-register>¿Qué día te gustaría que Appbass te invite a practicar?
+      <label data-register>¿Qué día te gustaría que BassApp te invite a practicar?
         <select name="reminderDay">${days.map((d,i)=>`<option value="${i+1}">${d}</option>`).join('')}</select>
         <small>Verás el aviso al abrir la app. Los correos todavía no están habilitados.</small></label>
       <p id="account-error" role="alert" class="form-error"></p>
