@@ -1,4 +1,58 @@
 import {test,expect} from '@playwright/test';
+test('minor lesson recommends its scale, reading bars and actual practice',async({page})=>{
+ await page.route('**/api/**',r=>r.fulfill({json:{user:null}}));
+ await page.goto('/appbass.html#curso');
+ await page.locator('[data-lesson="B06"]').first().click();
+ await expect(page.locator('[data-lesson-scale]')).toHaveValue('natural-minor');
+ await expect(page.locator('[data-lesson-tonic]')).toHaveValue('C');
+ await page.locator('[data-lesson-reading]').click();
+ await expect(page.locator('.reading-bars')).toBeVisible();
+ await page.locator('[data-reading-return]').click();
+ await page.locator('#lesson-to-player').click();
+ await expect(page.locator('#exercise-select')).toHaveValue('minor-cadence');
+ await expect(page.locator('#detail-dialog')).not.toBeVisible();
+});
+test('bar audio schedules notes but not rests, and stops on leaving reading',async({page})=>{
+ await page.addInitScript(()=>{
+  window.barAudio=[];
+  const start=AudioBufferSourceNode.prototype.start,stop=AudioBufferSourceNode.prototype.stop;
+  AudioBufferSourceNode.prototype.start=function(at){window.barAudio.push(['start',at]);return start.call(this,at);};
+  AudioBufferSourceNode.prototype.stop=function(at){window.barAudio.push(['stop',at]);return stop.call(this,at);};
+ });
+ await page.goto('/appbass.html#lectura');await page.locator('[data-reading-level="5"]').click();
+ await page.locator('[data-bar-play]').click();
+ await expect.poll(()=>page.evaluate(()=>window.barAudio.filter(e=>e[0]==='start').length)).toBe(3);
+ const times=await page.evaluate(()=>window.barAudio.filter(e=>e[0]==='start').map(e=>e[1]));
+ expect(times[1]-times[0]).toBeCloseTo(1);expect(times[2]-times[1]).toBeCloseTo(1);
+ await page.locator('[data-reading-level="1"]').click();
+ await expect.poll(()=>page.evaluate(()=>window.barAudio.filter(e=>e[0]==='stop'&&e[1]===undefined).length)).toBeGreaterThan(0);
+});
+test('complete bars validate pitch and duration including rests',async({page})=>{
+ await page.goto('/appbass.html#lectura');
+ await page.locator('[data-reading-level="5"]').click();
+ await expect(page.locator('.reading-bars')).toBeVisible();
+ await page.locator('[data-bar-check]').click();
+ await expect(page.locator('[data-bar-feedback]')).toContainText('Elegí la nota');
+ await page.locator('[data-bar-pitch]').selectOption('2');
+ await page.locator('[data-bar-duration]').selectOption('2');
+ await page.locator('[data-bar-check]').click();
+ await expect(page.locator('[data-bar-feedback]')).toContainText('Revisá');
+ for(const [i,pitch] of ['2','4','5','rest'].entries()){
+  await expect(page.locator('[data-bar-position]')).toHaveText(`Figura ${i+1} de 4`);
+  await page.locator('[data-bar-pitch]').selectOption(pitch);
+  await page.locator('[data-bar-duration]').selectOption('1');
+  await page.locator('[data-bar-check]').click();
+ }
+ await expect(page.locator('[data-bar-feedback]')).toContainText('¡Compás completo!');
+ await expect(page.locator('[data-bar-stats]')).toContainText('1');
+ await page.locator('[data-bar-next]').click();
+ await expect(page.locator('[data-bar-position]')).toHaveText('Figura 1 de 3');
+ await page.locator('[data-bar-reveal]').click();
+ await expect(page.locator('[data-bar-feedback]')).toContainText('Do · blanca');
+ await expect(page.locator('[data-bar-check]')).toBeDisabled();
+ await page.locator('[data-reading-level="1"]').click();
+ await expect(page.locator('.reading-bars')).toBeHidden();
+});
 test('correct reading answers play a real sample and advance automatically',async({page})=>{
  await page.addInitScript(()=>{
   window.readingAudioStarts=0;
@@ -19,7 +73,7 @@ test('reading section presents a bass-clef note exercise with progressive levels
  await expect(page.locator('#reading-workspace')).toBeVisible();
  await expect(page.locator('.reading-theory')).toContainText('Fa de la cuarta línea');
  await expect(page.locator('.reading-theory')).toContainText('Registro de estudio');
- await expect(page.locator('.reading-clef')).toHaveCount(1);
+ await expect(page.locator('.reading-clef:visible')).toHaveCount(1);
  await expect(page.locator('[data-reading-answer]')).toHaveCount(3);
  await page.locator('[data-reading-answer="4"]').click();
  await expect(page.locator('[data-reading-next]')).toBeDisabled();
@@ -44,6 +98,8 @@ test('home actions connect course, reading, atlas and a ten minute session',asyn
  await expect(page.locator('#practice-play')).toBeHidden();
  await page.locator('#home-continue').click();
  await expect(page.locator('#detail-dialog')).toBeVisible();
+ await expect(page.locator('.lesson-recommendation')).toContainText('Recomendado para esta lección');
+ await expect(page.locator('[data-lesson-scale]')).toHaveValue('major');
  await page.locator('[data-lesson-reading]').click();
  await expect(page.locator('[data-reading-context]')).toContainText('B01');
  await page.locator('[data-reading-return]').click();

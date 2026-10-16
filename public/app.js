@@ -11,6 +11,7 @@ import {learningStore} from './learning-store.mjs';
 import {mountAtlas} from './atlas-ui.mjs';
 import {mountReading} from './reading-ui.mjs';
 import {ATLAS_FAMILIES,TONICS} from './atlas-engine.mjs';
+import {recommendationForLesson} from './lesson-recommendations.mjs';
 'use strict';
 const $ = (s, root = document) => root.querySelector(s);
 const $$ = (s, root = document) => [...root.querySelectorAll(s)];
@@ -124,10 +125,17 @@ async function openLesson(id){
   const connections=document.createElement('section');connections.className='lesson-connections';
   connections.innerHTML='<h3>Llevá esta lección a la práctica</h3><p>Usá el acompañamiento de la lección, repasá lectura o explorá una escala con su tónica.</p><div class="button-row"><button class="secondary" data-lesson-reading>Practicar lectura</button></div><div class="button-row"><label>Escala o arpegio<select data-lesson-scale>'+ATLAS_FAMILIES.map(f=>'<option value="'+f.id+'">'+escapeHTML(f.name||f.id)+'</option>').join('')+'</select></label><label>Tónica<select data-lesson-tonic>'+TONICS.map(t=>'<option>'+escapeHTML(t)+'</option>').join('')+'</select></label><button class="secondary" data-lesson-atlas>Ver partitura y patrón</button></div>';
   $('#lesson-to-player').parentElement.after(connections);
-  connections.querySelector('[data-lesson-reading]').onclick=()=>{dialog.close();reading.openLesson(id);location.hash='lectura';};
+  const recommendation=recommendationForLesson(id);
+  if(recommendation){
+   connections.querySelector('[data-lesson-scale]').value=recommendation.family;
+   connections.querySelector('[data-lesson-tonic]').value=recommendation.tonic;
+   const exercise=catalog.find(c=>c.id===recommendation.exercise);
+   connections.querySelector('h3').insertAdjacentHTML('afterend',`<p class="lesson-recommendation"><strong>Recomendado para esta lección</strong><br>${escapeHTML(recommendation.reason)}<br>Práctica complementaria: ${escapeHTML(exercise.title)}. Podés cambiar la escala y la tónica.</p>`);
+  }
+  connections.querySelector('[data-lesson-reading]').onclick=()=>{dialog.close();reading.openLesson(id,recommendation?.readingLevel||1);location.hash='lectura';};
   connections.querySelector('[data-lesson-atlas]').onclick=()=>{const family=connections.querySelector('[data-lesson-scale]').value,tonic=connections.querySelector('[data-lesson-tonic]').value;dialog.close();location.hash='escalas';scaleAtlas.open(family,tonic);};
   $$('[data-harmony-open]',$('#detail-content')).forEach(b=>b.onclick=()=>{dialog.close();harmony.open(b.dataset.harmonyOpen);});
-  $('#lesson-to-player').onclick=async()=>{dialog.close();await practice.selectLesson(id);location.hash='practicar';navigate();if(!catalog.some(c=>c.lesson===id))toast('Elegí una práctica del catálogo para aplicar el concepto.');};
+  $('#lesson-to-player').onclick=async()=>{try{const loaded=recommendation?await practice.selectExercise(recommendation.exercise):await practice.selectLesson(id);if(loaded===false){toast('No se pudo abrir la práctica. Intentá nuevamente.');return;}dialog.close();location.hash='practicar';navigate();}catch{toast('No se pudo cargar la práctica. Intentá nuevamente.');}};
   $$('[data-state]',$('#detail-content')).forEach(b=>b.onclick=async()=>{if(!currentUser)return account.openAuth();try{await api('/api/activity',{kind:'lesson',lessonId:id,state:b.dataset.state});await loadProgress();$$('[data-state]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));toast('Estado guardado.');}catch(e){toast(e.message);}});
   $$('.score-img,.map-img',$('#detail-content')).forEach(img=>{img.tabIndex=0;img.setAttribute('role','button');img.setAttribute('aria-label','Ampliar '+img.alt);const zoom=()=>window.open(img.src,'_blank','noopener');img.onclick=zoom;img.onkeydown=e=>{if(e.key==='Enter')zoom();};});
   if(currentUser){currentUser.lastLesson=id;void api('/api/activity',{kind:'lesson',lessonId:id,state:'opened'}).catch(()=>{});}

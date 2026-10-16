@@ -49,7 +49,10 @@ export const READING_LEVELS=[
 ];
 const RHYTHMS=[['𝅝','Redonda',4],['𝅗𝅥','Blanca',2],['♩','Negra',1],['𝄽','Silencio de negra',1]];
 import {bassSound,loadBassBank,nearestBassSample} from './bass-sounds.mjs';
+import {mountMeasures} from './reading-measures.mjs';
+READING_LEVELS.push({title:'Compases completos',text:'Combiná altura, duración y silencios en cuatro pulsos. Resolvé las figuras en orden y tocá el compás.'});
 export function mountReading(host){
+ let measures;
  let audioContext,source,advanceTimer,generation=0;
  function cancelPending(){generation++;clearTimeout(advanceTimer);if(source){try{source.stop();}catch{}source=null;}}
  async function soundNote(writtenMidi,version){
@@ -81,14 +84,17 @@ export function mountReading(host){
  <h3>Practicá paso a paso</h3><p>Empezá con tres notas. Avanzá cuando puedas reconocerlas y explicar dónde están. Podés volver a cualquier nivel.</p><div class="reading-levels" role="group" aria-label="Nivel de lectura">${READING_LEVELS.map((l,i)=>`<button data-reading-level="${i+1}">${i+1} · ${l.title}</button>`).join('')}</div><p data-reading-lesson></p><p data-reading-context hidden></p></div>
  <div class="reading-exercise card"><div class="reading-meta"><span>Resueltos <b data-reading-total>0</b></span><span>Al primer intento <b data-reading-score>0</b></span><span>Racha <b data-reading-streak>0</b></span></div><div data-reading-staff></div><p class="reading-prompt"></p><div class="reading-answers" role="group" aria-label="Elegir respuesta"></div><p data-reading-feedback class="reading-feedback" role="status"></p><div class="button-row"><button class="secondary" data-reading-reveal>Ver explicación</button><button class="primary" data-reading-next disabled>Siguiente ejercicio</button></div></div>`;
  const $=s=>host.querySelector(s);
+ const measureHost=document.createElement('section');measureHost.className='reading-bars card';measureHost.hidden=true;host.append(measureHost);measures=mountMeasures(measureHost);
  function update(){ $('[data-reading-total]').textContent=total;$('[data-reading-score]').textContent=score;$('[data-reading-streak]').textContent=streak; }
  function explanation(){return level===4?`${RHYTHMS[rhythm][1]}: ${RHYTHMS[rhythm][2]} pulso(s) en 4/4.`:`${midiName(note)}: ${readingPosition(note)}.${noteGeometry(note).alter?' El sostenido eleva la nota natural un semitono.':''}`;}
  function finish(correct){answered=true;total++;if(correct&&attempts===0){score++;streak++;}else streak=0;update();$('[data-reading-feedback]').textContent=(correct?'¡Bien! ':'Repasemos: ')+explanation();if(level!==4)$('[data-reading-staff]').innerHTML=staff(note,true);host.querySelectorAll('[data-reading-answer]').forEach(b=>b.disabled=true);$('[data-reading-next]').disabled=false;$('[data-reading-reveal]').disabled=true;}
  function render(){
   cancelPending();
+  measures.stop();measureHost.hidden=level!==5;$('.reading-exercise').hidden=level===5;
   answered=false;attempts=0;$('[data-reading-next]').disabled=true;$('[data-reading-reveal]').disabled=false;$('[data-reading-feedback]').textContent='';
   $('[data-reading-lesson]').textContent=READING_LEVELS[level-1].text;
   host.querySelectorAll('[data-reading-level]').forEach(b=>{b.classList.toggle('selected',Number(b.dataset.readingLevel)===level);b.setAttribute('aria-pressed',String(Number(b.dataset.readingLevel)===level));});
+  if(level===5)return;
   $('[data-reading-staff]').innerHTML=level===4?`<div class="reading-rhythm-question"><span aria-hidden="true">${RHYTHMS[rhythm][0]}</span><strong>${RHYTHMS[rhythm][1]}</strong></div>`:staff(note);
   $('.reading-prompt').textContent=level===4?'¿Cuántos pulsos dura en 4/4?':'¿Qué nota es?';
   const choices=level===4?[[1,'1 pulso'],[2,'2 pulsos'],[4,'4 pulsos']]:[...new Set(READING_LEVELS[level-1].notes.map(n=>n%12))].map(pc=>[pc,NOTE_NAMES[pc]]);
@@ -103,10 +109,10 @@ export function mountReading(host){
    }else{attempts++;streak=0;update();b.disabled=true;b.classList.add('wrong');$('[data-reading-feedback]').textContent=level===4?'Probá otra vez: negra = 1, blanca = 2, redonda = 4. El silencio de negra dura lo mismo que la negra.':`Probá otra vez: mirá la ${readingPosition(note)}. Contá desde Fa en la cuarta línea.`;}
   });
  }
- function next(){if(level===4)rhythm=(rhythm+1)%RHYTHMS.length;else{const pool=READING_LEVELS[level-1].notes.filter(n=>n!==note);note=pool[Math.floor(Math.random()*pool.length)];}render();}
+ function next(){if(level===4)rhythm=(rhythm+1)%RHYTHMS.length;else if(level!==5){const pool=READING_LEVELS[level-1].notes.filter(n=>n!==note);note=pool[Math.floor(Math.random()*pool.length)];}render();}
  host.querySelectorAll('[data-reading-level]').forEach(b=>b.onclick=()=>{level=Number(b.dataset.readingLevel);streak=0;update();next();});
  $('[data-reading-next]').onclick=next;$('[data-reading-reveal]').onclick=()=>{if(!answered)finish(false);};
  render();
- return {reset:next,openLesson(id){level=1;note=50;const context=$('[data-reading-context]');context.hidden=false;context.innerHTML=`Lectura de apoyo · ${esc(id)} <button class="secondary" data-reading-return>Volver a la lección</button>`;context.querySelector('button').onclick=()=>document.dispatchEvent(new CustomEvent('reading-return',{detail:id}));render();}};
+ return {reset:next,openLesson(id,startLevel=1){level=startLevel;note=50;const context=$('[data-reading-context]');context.hidden=false;context.innerHTML=`Lectura de apoyo · ${esc(id)} <button class="secondary" data-reading-return>Volver a la lección</button>`;context.querySelector('button').onclick=()=>document.dispatchEvent(new CustomEvent('reading-return',{detail:id}));render();}};
 }
 
