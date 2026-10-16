@@ -8,6 +8,8 @@ try{
  for(let i=0;i<2;i++)await pool.request().batch(ddl);
  const r=await pool.request().query("SELECT COUNT(*) AS n FROM sys.tables WHERE name IN ('beta_learning_preferences','beta_learning_reviews','beta_learning_review_history','beta_learning_unit_progress','beta_learning_daily_progress')");
  if(r.recordset[0].n!==5)throw Error('Schema verification failed');
- console.log('AppbassBeta: five additive learning tables verified; repeat migration succeeded. No user records changed.');
-}catch(e){console.error('Beta learning migration failed:',e.code||e.name);process.exitCode=1;}
+ const c=await pool.request().query("SELECT COUNT(*) AS n FROM sys.check_constraints WHERE parent_object_id=OBJECT_ID('dbo.beta_learning_preferences') AND definition LIKE '%reading%'");
+ if(c.recordset[0].n!==1)throw Error('Reading preference constraint verification failed');
+ console.log('AppbassBeta: learning tables and reading preference verified; repeat migration succeeded. No user records changed.');
+}catch(e){console.error('Beta learning migration failed:',e.code||e.name,e.number||'',String(e.message||'').replace(/(Password|Pwd)=[^;\s]+/gi,'$1=[redacted]'));process.exitCode=1;}
 finally{await pool?.close();}

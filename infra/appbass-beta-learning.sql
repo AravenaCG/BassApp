@@ -44,4 +44,17 @@ IF OBJECT_ID('dbo.beta_learning_daily_progress','U') IS NULL
   PRIMARY KEY(user_id,challenge_date,family_id));
 IF COL_LENGTH('dbo.beta_learning_daily_progress','reviewed') IS NULL
  ALTER TABLE dbo.beta_learning_daily_progress ADD reviewed BIT NOT NULL DEFAULT 1;
+-- Expand the preference allow-list without touching rows or any database other than AppbassBeta.
+DECLARE @preference_check SYSNAME;
+SELECT TOP 1 @preference_check=cc.name
+FROM sys.check_constraints cc
+WHERE cc.parent_object_id=OBJECT_ID('dbo.beta_learning_preferences')
+ AND cc.definition LIKE '%section%' AND cc.definition NOT LIKE '%reading%';
+IF @preference_check IS NOT NULL
+BEGIN
+ DECLARE @drop_preference_check NVARCHAR(500)=N'ALTER TABLE dbo.beta_learning_preferences DROP CONSTRAINT '+QUOTENAME(@preference_check);
+ EXEC sp_executesql @drop_preference_check;
+ ALTER TABLE dbo.beta_learning_preferences ADD CONSTRAINT CK_beta_learning_preferences_section
+  CHECK(section IN ('practice','atlas','avatar','session','harmony','reading'));
+END;
 COMMIT;

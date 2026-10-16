@@ -1,4 +1,27 @@
 import {test,expect} from '@playwright/test';
+test('reading statistics are restored from the signed-in account',async({page})=>{
+ const user={id:'reader-cloud',displayName:'Reader',email:'reader@example.test',level:'basic',instrument:'electricBass',weeklyStudyMinutes:60,reminderDay:1};
+ const cloud={preferences:{},reviews:{},units:{},daily:[]};
+ await page.addInitScript(()=>localStorage.setItem('appbass-tour-v1-reader-cloud','seen'));
+ await page.route('**/api/**',async route=>{const path=new URL(route.request().url()).pathname;let body={ok:true};
+  if(path==='/api/auth/me')body={user,plan:{total:15,warmup:3,concept:5,play:7},reminder:false};
+  if(path==='/api/progress')body={completed:[],states:{},totalPoints:0};
+  if(path==='/api/learning'){if(route.request().method()==='POST'){const b=route.request().postDataJSON();cloud.preferences[b.section]={value:b.value,version:b.version+1};body={ok:true,version:b.version+1};}else body=cloud;}
+  await route.fulfill({json:body});
+ });
+ await page.goto('/appbass.html#lectura');await expect(page.locator('[data-reading-save]')).toContainText('cargado desde tu cuenta');
+ await page.locator('[data-reading-answer="2"]').click();await expect(page.locator('[data-reading-save]')).toContainText('guardado en tu cuenta');
+ expect(cloud.preferences.reading.value).toMatchObject({solved:1,firstTry:1,bestStreak:1});
+ await page.evaluate(()=>localStorage.clear());await page.reload();
+ await expect(page.locator('[data-reading-total]')).toHaveText('1');await expect(page.locator('[data-reading-score]')).toHaveText('1');await expect(page.locator('[data-reading-best]')).toHaveText('1');
+});
+test('flat spelling is shown and answered by its written name',async({page})=>{
+ await page.addInitScript(()=>{Math.random=()=>.1;});
+ await page.goto('/appbass.html#lectura');await page.locator('[data-reading-level="3"]').click();
+ await expect(page.locator('[data-reading-staff] svg')).toHaveAttribute('data-reading-name','Sol♭');
+ await expect(page.locator('[data-reading-staff] .reading-accidental')).toHaveText('♭');
+ await page.locator('[data-reading-answer="Sol♭"]').click();await expect(page.locator('[data-reading-feedback]')).toContainText('Sol♭');
+});
 test('minor lesson recommends its scale, reading bars and actual practice',async({page})=>{
  await page.route('**/api/**',r=>r.fulfill({json:{user:null}}));
  await page.goto('/appbass.html#curso');
@@ -88,8 +111,8 @@ test('reading section presents a bass-clef note exercise with progressive levels
  await page.locator('[data-reading-next]').click();
  await expect(page.locator('[data-reading-total]')).toHaveText('2');
  await page.locator('[data-reading-level="4"]').click();
- await page.locator('[data-reading-answer="2"]').click();
- await expect(page.locator('[data-reading-feedback]')).toContainText('Blanca: 2');
+ await page.locator('[data-reading-answer="4"]').click();
+ await expect(page.locator('[data-reading-feedback]')).toContainText('Redonda: 4');
 });
 test('home actions connect course, reading, atlas and a ten minute session',async({page})=>{
  await page.route('**/api/**',r=>r.fulfill({json:{user:null,plan:{total:30,warmup:6,concept:9,play:15},reminder:false}}));

@@ -9,7 +9,7 @@ import {tourStop} from './tour.mjs';
 import {mountLearningTools} from './learning-tools.mjs';
 import {learningStore} from './learning-store.mjs';
 import {mountAtlas} from './atlas-ui.mjs';
-import {mountReading} from './reading-ui.mjs';
+import {mountReading} from './reading-ui.mjs?v=3';
 import {ATLAS_FAMILIES,TONICS} from './atlas-engine.mjs';
 import {recommendationForLesson} from './lesson-recommendations.mjs';
 'use strict';
@@ -60,7 +60,7 @@ document.addEventListener('click',e=>{if(e.target.closest('#atlas-play,#harmony-
 const learningTools=mountLearningTools({stopOtherAudio(){practice.stop();harmony.stop();scaleAtlas.stop();},async onPractice(id){learningTools.stop();await practice.selectExercise(id);location.hash='practicar';navigate();workspace.scrollIntoView({block:'start'});},onLesson:openLesson});
 workspace.addEventListener('click',e=>{if(e.target.closest('#practice-play, [data-listen-repertoire]'))learningTools.stop();});
 const account=mountAccount({
-  async onSession(user){learningStore.beginSession();currentUser=user;progress=null;courseSpaces.setUser(user);learningTools.setUser(user);instrument=user?.instrument||'electricBass';lessonLevel=user?.level||'basic';await practice.setUser(user);harmony.setUser(user);scaleAtlas.setUser(user);await learningStore.setUser(user);},
+  async onSession(user){learningStore.beginSession();currentUser=user;progress=null;courseSpaces.setUser(user);learningTools.setUser(user);instrument=user?.instrument||'electricBass';lessonLevel=user?.level||'basic';await practice.setUser(user);harmony.setUser(user);scaleAtlas.setUser(user);await learningStore.setUser(user);reading.setUser(user);},
   onProgress:loadProgress,
   onReady:user=>help.setUser(user),
   onPractice(){location.hash='practicar';navigate();},

@@ -1,6 +1,6 @@
 import {bassSound,loadBassBank,nearestBassSample} from './bass-sounds.mjs';
-const names=['Do','Do♯','Re','Re♯','Mi','Fa','Fa♯','Sol','Sol♯','La','La♯','Si'];
-const n=(midi,beats)=>({midi,beats});
+const names=['Do','Do♯/Re♭','Re','Re♯/Mi♭','Mi','Fa','Fa♯/Sol♭','Sol','Sol♯/La♭','La','La♯/Si♭','Si'];
+const n=(midi,beats,options={})=>({midi,beats,...options});
 export const READING_MEASURES=[
  {title:'Un paso por pulso',events:[n(50,1),n(52,1),n(53,1),n(null,1)]},
  {title:'Sostener y respirar',events:[n(48,2),n(null,1),n(50,1)]},
@@ -9,10 +9,14 @@ export const READING_MEASURES=[
  {title:'Dividir el pulso',events:[n(50,.5),n(52,.5),n(53,1),n(null,1),n(50,1)]},
  {title:'Corcheas y registro grave',events:[n(40,1),n(null,1),n(43,.5),n(45,.5),n(47,1)]},
  {title:'Una nota, cuatro pulsos',events:[n(48,4)]},
- {title:'Silencio de blanca',events:[n(50,1),n(null,2),n(53,1)]}
+ {title:'Silencio de blanca',events:[n(50,1),n(null,2),n(53,1)]},
+ {title:'Blanca con puntillo',events:[n(43,3,{dotted:true}),n(47,1)]},
+ {title:'Síncopa entre pulsos',events:[n(48,.5),n(50,1.5,{dotted:true}),n(null,.5),n(52,.5),n(53,1)]},
+ {title:'Ligadura: un solo sonido',events:[n(45,2,{tieToNext:true}),n(45,2,{tiedFromPrevious:true})]},
+ {title:'Bemoles escritos',events:[n(49,1,{letter:'D',octave:3,accidental:-1,name:'Re♭'}),n(51,1,{letter:'E',octave:3,accidental:-1,name:'Mi♭'}),n(46,1,{letter:'B',octave:2,accidental:-1,name:'Si♭'}),n(48,1)]}
 ];
-const duration=b=>({'.5':'corchea','1':'negra','2':'blanca','4':'redonda'}[b]);
-export function measureLabel(event){return `${event.midi===null?'Silencio de':names[event.midi%12]+' ·'} ${duration(event.beats)} · ${event.beats} pulso(s)`;}
+const duration=b=>({'.5':'corchea','1':'negra','1.5':'negra con puntillo','2':'blanca','3':'blanca con puntillo','4':'redonda'}[b]);
+export function measureLabel(event){return `${event.midi===null?'Silencio de':(event.name||names[event.midi%12])+' ·'} ${duration(event.beats)} · ${event.beats} pulso(s)${event.tieToNext?' · ligada a la siguiente':''}`;}
 export function measureSVG(measure,active=0,reveal=false){
  let svg='<svg class="reading-staff reading-measure" viewBox="0 0 560 180" role="img" aria-label="Compás de cuatro por cuatro en clave de fa">';
  for(let i=0;i<5;i++)svg+=`<line x1="20" x2="540" y1="${64+i*10}" y2="${64+i*10}"/>`;
@@ -24,24 +28,27 @@ export function measureSVG(measure,active=0,reveal=false){
    if(e.beats===2)svg+=`<path class="measure-rest" d="M${x-10} 84h20v-5h-20z"/>`;
    else svg+=`<path class="measure-rest" d="M${x-3} 66l8 11-7 8 7 9c-15-7-15 6-6 10-16-2-15-17-4-17l-7-9 9-3z"/>`;
   }else{
-   const pc=[0,2,4,5,7,9,11].indexOf(e.midi%12),step=(Math.floor(e.midi/12)-1)*7+pc,y=104-(step-18)*5;
+   const naturalIndex=e.letter?'CDEFGAB'.indexOf(e.letter):[0,2,4,5,7,9,11].indexOf(e.midi%12),step=(e.octave??Math.floor(e.midi/12)-1)*7+naturalIndex,y=104-(step-18)*5;
    for(let ledger=114;ledger<=y;ledger+=10)svg+=`<line x1="${x-14}" x2="${x+14}" y1="${ledger}" y2="${ledger}"/>`;
+   if(e.accidental)svg+=`<text class="reading-accidental" x="${x-25}" y="${y+6}">${e.accidental>0?'♯':'♭'}</text>`;
    svg+=`<ellipse class="reading-note ${e.beats>=2?'measure-hollow':''}" cx="${x}" cy="${y}" rx="8" ry="5" transform="rotate(-20 ${x} ${y})"/>`;
    if(e.beats<4)svg+=`<path class="reading-stem" d="M${x+7} ${y}v-32"/>`;
    if(e.beats===.5)svg+=`<path class="reading-stem" d="M${x+7} ${y-32}q20 12 4 23"/>`;
+   if(e.dotted)svg+=`<circle class="measure-dot" cx="${x+17}" cy="${y}" r="2.4"/>`;
+   if(e.tieToNext){const nextX=120+(beat+e.beats)*100;svg+=`<path class="measure-tie" d="M${x+8} ${y+10} Q${(x+nextX)/2} ${y+27} ${nextX-8} ${y+10}"/>`;}
   }
   svg+=`<text x="${x}" y="150" text-anchor="middle">${Number.isInteger(beat)?beat+1:(Math.floor(beat)+1)+' y'}</text>`;
-  if(reveal)svg+=`<text class="measure-solution" x="${x}" y="171" text-anchor="middle">${e.midi===null?'Sil.':names[e.midi%12]} (${e.beats})</text>`;
+  if(reveal)svg+=`<text class="measure-solution" x="${x}" y="171" text-anchor="middle">${e.midi===null?'Sil.':e.name||names[e.midi%12]} (${e.beats})</text>`;
   svg+='</g>';beat+=e.beats;
  });return svg+'</svg>';
 }
-export function mountMeasures(host){
+export function mountMeasures(host,{onSolved=()=>{}}={}){
  let index=0,cursor=0,errors=0,solved=0,revealed=false,ctx,version=0,timer,voices=[],timers=[];
  const $=s=>host.querySelector(s);
  function stop(){version++;clearTimeout(timer);timers.forEach(clearTimeout);timers=[];voices.forEach(v=>{try{v.stop();}catch{}});voices=[];if($('[data-bar-play]'))$('[data-bar-play]').disabled=false;if($('[data-bar-check]'))$('[data-bar-check]').disabled=revealed||cursor>=READING_MEASURES[index].events.length;}
  function render(){
   stop();const bar=READING_MEASURES[index];
-  host.innerHTML=`<h3>Compás ${index+1} · ${bar.title}</h3><p>En 4/4 entran cuatro negras. Una blanca ocupa dos pulsos; dos corcheas comparten uno. Leé de izquierda a derecha: elegí la nota (o silencio) y su duración. Los números debajo indican dónde empieza cada figura.</p><p>No evaluamos tu ejecución con micrófono: después de resolver, tocá el compás con el audio.</p><div class="measure-scroll">${measureSVG(bar,cursor,revealed)}</div><p data-bar-position></p><div class="button-row"><label>Nota o silencio<select data-bar-pitch><option value="">Elegí…</option>${[0,2,4,5,7,9,11].map(p=>`<option value="${p}">${names[p]}</option>`).join('')}<option value="rest">Silencio</option></select></label><label>Duración<select data-bar-duration><option value="">Elegí…</option><option value="0.5">Corchea · ½ pulso</option><option value="1">Negra · 1 pulso</option><option value="2">Blanca · 2 pulsos</option><option value="4">Redonda · 4 pulsos</option></select></label><button data-bar-check class="primary">Comprobar figura</button></div><p role="status" data-bar-feedback></p><div class="button-row"><label>Tempo (BPM)<input data-bar-tempo type="number" min="40" max="120" value="60"></label><button data-bar-play class="secondary">Escuchar compás</button><button data-bar-stop class="secondary">Detener</button><button data-bar-reveal class="secondary">Ver solución</button><button data-bar-next class="primary">Otro compás</button></div><p data-bar-stats>Compases resueltos sin ayuda: ${solved}</p>`;
+  host.innerHTML=`<h3>Compás ${index+1} de ${READING_MEASURES.length} · ${bar.title}</h3><p>En 4/4 entran cuatro negras. Una blanca ocupa dos pulsos; dos corcheas comparten uno. El puntillo agrega la mitad del valor y la ligadura mantiene un único sonido. Leé de izquierda a derecha: elegí la nota (o silencio) y su duración.</p><p>No evaluamos tu ejecución con micrófono: después de resolver, tocá el compás con el audio.</p><div class="measure-scroll">${measureSVG(bar,cursor,revealed)}</div><p data-bar-position></p><div class="button-row"><label>Nota o silencio<select data-bar-pitch><option value="">Elegí…</option>${[0,1,2,3,4,5,6,7,8,9,10,11].map(p=>`<option value="${p}">${names[p]}</option>`).join('')}<option value="rest">Silencio</option></select></label><label>Duración<select data-bar-duration><option value="">Elegí…</option><option value="0.5">Corchea · ½ pulso</option><option value="1">Negra · 1 pulso</option><option value="1.5">Negra con puntillo · 1½</option><option value="2">Blanca · 2 pulsos</option><option value="3">Blanca con puntillo · 3</option><option value="4">Redonda · 4 pulsos</option></select></label><button data-bar-check class="primary">Comprobar figura</button></div><p role="status" data-bar-feedback></p><div class="button-row"><label>Tempo (BPM)<input data-bar-tempo type="number" min="40" max="120" value="60"></label><button data-bar-play class="secondary">Escuchar compás</button><button data-bar-stop class="secondary">Detener</button><button data-bar-reveal class="secondary">Ver solución</button><button data-bar-next class="primary">Otro compás</button></div><p data-bar-stats>Compases resueltos sin ayuda: ${solved}</p>`;
   $('[data-bar-position]').textContent=`Figura ${cursor+1} de ${bar.events.length}`;
   $('.measure-scroll').insertAdjacentHTML('afterend','<p class="footnote">En pantallas pequeñas, deslizá la partitura horizontalmente. El resaltado sigue la figura que estás leyendo o escuchando.</p>');
   $('[data-bar-check]').onclick=check;
@@ -60,7 +67,7 @@ export function mountMeasures(host){
   $('[data-bar-feedback]').textContent='¡Bien! '+measureLabel(e);$('[data-bar-check]').disabled=true;
   const token=version;
   timer=setTimeout(()=>{if(token!==version)return;cursor++;
-   if(cursor===bar.events.length){if(!revealed)solved++;$('[data-bar-feedback]').textContent=`¡Compás completo! ${errors?'Lo resolviste con reintentos.':'Todas las figuras al primer intento.'} Ahora contá cuatro pulsos y tocalo.`;$('[data-bar-position]').textContent='Compás resuelto';$('[data-bar-stats]').textContent=`Compases resueltos sin ayuda: ${solved}`;highlight(-1);}
+   if(cursor===bar.events.length){if(!revealed){solved++;onSolved(solved);}$('[data-bar-feedback]').textContent=`¡Compás completo! ${errors?'Lo resolviste con reintentos.':'Todas las figuras al primer intento.'} Ahora contá cuatro pulsos y tocalo.`;$('[data-bar-position]').textContent='Compás resuelto';$('[data-bar-stats]').textContent=`Compases resueltos sin ayuda: ${solved}`;highlight(-1);}
    else{highlight(cursor);$('[data-bar-position]').textContent=`Figura ${cursor+1} de ${bar.events.length}`;$('[data-bar-check]').disabled=false;$('[data-bar-pitch]').value='';$('[data-bar-duration]').value='';$('[data-bar-pitch]').focus();}
   },800);
  }
@@ -72,9 +79,9 @@ export function mountMeasures(host){
   try{
    ctx??=new (window.AudioContext||window.webkitAudioContext)();await ctx.resume();const bank=await loadBassBank(ctx,bassSound());if(token!==version)return;if(!bank.length)throw Error();
    const start=ctx.currentTime+.08,seconds=60/bpm;let beat=0;
-   READING_MEASURES[index].events.forEach((e,i)=>{
+   READING_MEASURES[index].events.forEach((e,i,events)=>{
     timers.push(setTimeout(()=>{if(token===version)highlight(i);},80+beat*seconds*1000));
-    if(e.midi!==null){const sample=nearestBassSample(bank,e.midi-12),v=ctx.createBufferSource(),gain=ctx.createGain(),at=start+beat*seconds,end=at+e.beats*seconds;
+    if(e.midi!==null&&!e.tiedFromPrevious){const sample=nearestBassSample(bank,e.midi-12),v=ctx.createBufferSource(),gain=ctx.createGain(),at=start+beat*seconds,tied=e.tieToNext&&events[i+1]?.midi===e.midi?events[i+1].beats:0,end=at+(e.beats+tied)*seconds;
      v.buffer=sample.buffer;v.playbackRate.value=2**((e.midi-12-sample.midi)/12);gain.gain.setValueAtTime(0,at);gain.gain.linearRampToValueAtTime(.65,at+.01);gain.gain.setValueAtTime(.65,end-.06);gain.gain.linearRampToValueAtTime(0,end-.01);v.connect(gain);gain.connect(ctx.destination);v.start(at);v.stop(end);voices.push(v);v.onended=()=>{v.disconnect();gain.disconnect();};}
     beat+=e.beats;
    });
@@ -82,5 +89,5 @@ export function mountMeasures(host){
   }catch{if(token===version){$('[data-bar-feedback]').textContent='No se pudo cargar el audio. Podés seguir leyendo y volver a intentar.';$('[data-bar-play]').disabled=false;}}
  }
  render();window.addEventListener('hashchange',stop);document.addEventListener('visibilitychange',()=>{if(document.hidden)stop();});document.addEventListener('bass-audition-stop',stop);
- return {stop};
+ return {stop,solved:()=>solved,setSolved(value){solved=Math.max(0,Number(value)||0);if($('[data-bar-stats]'))$('[data-bar-stats]').textContent=`Compases resueltos sin ayuda: ${solved}`;}};
 }

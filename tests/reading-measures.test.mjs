@@ -8,11 +8,14 @@ import {catalog} from '../public/practice-engine.mjs';
 test('all reading bars fill 4/4, respect written range and render each event',()=>{
  for(const bar of READING_MEASURES){
   assert.equal(bar.events.reduce((sum,e)=>sum+e.beats,0),4);
-  for(const e of bar.events){assert.ok([.5,1,2,4].includes(e.beats));assert.ok(e.midi===null||e.midi>=40&&e.midi<=57);}
+  for(const e of bar.events){assert.ok([.5,1,1.5,2,3,4].includes(e.beats));assert.ok(e.midi===null||e.midi>=40&&e.midi<=57);}
   assert.equal((measureSVG(bar).match(/data-measure-event=/g)||[]).length,bar.events.length);
  }
  assert.ok(READING_MEASURES.some(b=>b.events.some(e=>e.midi===null)));
  assert.ok(READING_MEASURES.some(b=>b.events.some(e=>e.beats===.5)));
+ assert.ok(READING_MEASURES.some(b=>b.events.some(e=>e.dotted)));
+ assert.ok(READING_MEASURES.some(b=>b.events.some(e=>e.tieToNext)));
+ assert.ok(READING_MEASURES.some(b=>b.events.some(e=>e.accidental===-1)));
 });
 test('all forty course lessons have valid curated recommendations',()=>{
  const course=JSON.parse(readFileSync(new URL('../public/course/course.json',import.meta.url)));
