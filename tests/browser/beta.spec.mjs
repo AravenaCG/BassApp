@@ -237,8 +237,9 @@ test('practice selection changes notes, difficulty, sound clock and loops',async
  await expect(page.locator('#practice-difficulty')).toHaveValue('walking');
 });
 test('four-string guided view synchronizes realistic neck, enlarged fretboard, tab and score',async({page})=>{
+ test.setTimeout(45000);
  const errors=[];page.on('pageerror',e=>errors.push(e.message));await mocks(page);
- await page.goto('/appbass.html#practicar');
+ await page.goto('/appbass.html#practicar',{waitUntil:'domcontentloaded'});
  await page.locator('#exercise-select').selectOption('major-scale');
  await page.locator('#practice-view').selectOption('neck-tab-score');
  await expect(page.locator('#practice-cinematic')).toBeVisible();
@@ -253,6 +254,9 @@ test('four-string guided view synchronizes realistic neck, enlarged fretboard, t
  await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  await page.locator('#practice-instrument').selectOption('electricBass5');
  await expect(page.locator('#practice-view')).toHaveValue('falling');await expect(page.locator('#practice-cinematic')).toBeHidden();
+ await page.locator('#practice-view').selectOption('neck-tab');
+ await expect(page.locator('#practice-instrument')).toHaveValue('electricBass');await expect(page.locator('#practice-cinematic')).toBeVisible();
+ await expect(page.locator('#practice-status')).toContainText('cambiamos a bajo eléctrico de 4 cuerdas');
  expect(errors).toEqual([]);
 });
 test('mobile registration fields do not overlap and pending reminders can be snoozed',async({page})=>{

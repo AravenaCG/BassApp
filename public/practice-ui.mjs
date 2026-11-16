@@ -170,7 +170,14 @@ export function mountPractice(host,{onLesson,onJournal}) {
   });
   $('#practice-click').onchange=e=>engine.configure({metronome:e.target.checked});
   $('#practice-visual').onchange=()=>draw(engine.position());
-  $('#practice-view').onchange=e=>{if(!supportsCinematic(instrument)&&e.target.value!=='falling'){e.target.value='falling';$('#practice-status').textContent='La vista guiada está disponible para bajo eléctrico de 4 cuerdas.';}draw(engine.position());save();};
+  $('#practice-view').onchange=async e=>{
+    if(e.target.value!=='falling'&&!supportsCinematic(instrument)){
+      instrument='electricBass';$('#practice-instrument').value=instrument;setBassSound(bassSoundForInstrument(instrument));engine.sound=bassSoundForInstrument(instrument);$('#practice-sound-status').textContent='Sonido real · bajo con dedos';
+      if(item?.generated==='strings')await load(item.id);else{plan();draw(engine.position());}
+      $('#practice-status').textContent='Vista guiada activa · cambiamos a bajo eléctrico de 4 cuerdas.';save();return;
+    }
+    draw(engine.position());save();
+  };
   host.querySelectorAll('[data-cinematic-exercise]').forEach(button=>button.onclick=async()=>{$('#practice-level').value='';choices();await load(button.dataset.cinematicExercise);});
   host.querySelector('[data-tempo-stage="slow"]').onclick=()=>{const bpm=Math.max(30,Math.round((score?.tempo||72)*.7));$('#practice-tempo').value=String(bpm);$('#practice-tempo').dispatchEvent(new Event('change'));};
   host.querySelector('[data-tempo-stage="target"]').onclick=()=>{$('#practice-tempo').value=String(score?.tempo||72);$('#practice-tempo').dispatchEvent(new Event('change'));};
