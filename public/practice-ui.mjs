@@ -5,6 +5,7 @@ import {planFingering,routeHTML,stringNames} from './fingering.mjs';
 import {learningStore} from './learning-store.mjs';
 import {bassSoundForInstrument,setBassSound} from './bass-sounds.mjs';
 import {walkingScore,studyNotation,studyAdviceHTML,walkingCatalog} from './walking-studies.mjs';
+import {cinematicShell,supportsCinematic,fretboardSVG,tablatureSVG,compactScoreSVG,updateRealNeck} from './practice-cinematic.mjs';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const labels={basic:'Básico',intermediate:'Intermedio',advanced:'Avanzado'};
 const noteNames=['Do','Do♯','Re','Mi♭','Mi','Fa','Fa♯','Sol','La♭','La','Si♭','Si'];
@@ -16,9 +17,11 @@ export function mountPractice(host,{onLesson,onJournal}) {
       <label>Nivel<select id="practice-level"><option value="">Todos</option><option value="basic">Básico</option><option value="intermediate">Intermedio</option><option value="advanced">Avanzado</option></select></label>
       <label>Elegir otra práctica<select id="exercise-select"></select></label>
       <label id="difficulty-label">Línea de bajo<select id="practice-difficulty"><option value="roots">Fundamentales · básico</option><option value="fifths">Fundamental y quinta · básico</option><option value="arpeggios">Arpegios · intermedio</option><option value="walking">Walking bass · intermedio</option></select></label>
+      <label>Visualización<select id="practice-view"><option value="falling">Luces descendentes</option><option value="neck-tab">Mástil + tablatura</option><option value="neck-tab-score">Mástil + TAB + partitura</option></select><small id="practice-view-note">La vista guiada usa bajo eléctrico de 4 cuerdas.</small></label>
     </div>
     <div class="fret-area"><p id="practice-description"></p><svg id="practice-fretboard" viewBox="0 0 1000 300" role="img" aria-label="Notas de la práctica en el mástil"></svg>
     <p id="practice-note" role="status">Elegí una práctica para empezar.</p><div id="practice-bars" class="practice-bars"></div></div>
+    ${cinematicShell()}
     <div class="practice-transport">
       <button id="practice-play" class="primary" disabled>Reproducir</button><button id="practice-stop" class="secondary">Volver al inicio</button>
       <label>Tempo (BPM)<input id="practice-tempo" type="number" min="30" max="200" step="1" value="72"></label>
@@ -26,7 +29,7 @@ export function mountPractice(host,{onLesson,onJournal}) {
       <label>Escuchar<select id="practice-mix"><option value="full">Mezcla completa</option><option value="no-bass">Sin bajo · tocá vos</option><option value="bass-only">Sólo bajo</option><option value="original" hidden>Piano original · MIDI</option></select></label>
       <label class="check"><input type="checkbox" id="practice-guide" checked>Bajo guía</label>
       <label class="check"><input type="checkbox" id="practice-click" checked>Metrónomo</label>
-      <label class="check"><input type="checkbox" id="practice-visual" checked>Notas que caen</label>
+      <label class="check" id="practice-falling-toggle"><input type="checkbox" id="practice-visual" checked>Notas que caen</label>
     </div>
     <details class="practice-settings"><summary>Repetir compases y aumentar dificultad</summary><div class="practice-options">
       <label>Desde el compás<select id="loop-from"></select></label><label>Hasta el compás<select id="loop-to"></select></label>
@@ -61,8 +64,8 @@ export function mountPractice(host,{onLesson,onJournal}) {
     lastFrame=performance.now();draw(beat);$('#practice-tempo').value=String(tempo);
   },()=>{lastFrame=0;$('#practice-play').textContent='Reproducir';$('#practice-status').textContent='Práctica terminada. Podés repetirla o guardarla en tu diario.';});
   engine.onSoundStatus=value=>$('#practice-sound-status').textContent='Sonido activo: '+value;
-  function save(){if(!preferencesReady)return;const value={id:item?.id,tempo:engine.tempo,instrument,difficulty:$('#practice-difficulty').value};try{localStorage.setItem(storageKey,JSON.stringify(value));}catch{}if(learningStore.user&&storageKey==='appbass-practice-'+learningStore.user.id)learningStore.setPreference('practice',value).then(()=>$('#practice-status').textContent='Preferencias guardadas en tu cuenta.').catch(e=>$('#practice-status').textContent='No se guardó en la nube: '+e.message);}
-  learningStore.subscribe(async()=>{if(!learningStore.user||storageKey!=='appbass-practice-'+learningStore.user.id||!learningStore.ready)return;const pref=learningStore.preference('practice');if(!pref)return;preferencesReady=false;instrument=pref.instrument||instrument;$('#practice-instrument').value=instrument;$('#practice-difficulty').value=pref.difficulty||'roots';await load(pref.id||item?.id);if(pref.tempo){engine.tempo=pref.tempo;$('#practice-tempo').value=pref.tempo;}preferencesReady=true;});
+  function save(){if(!preferencesReady)return;const value={id:item?.id,tempo:engine.tempo,instrument,difficulty:$('#practice-difficulty').value,view:$('#practice-view').value};try{localStorage.setItem(storageKey,JSON.stringify(value));}catch{}if(learningStore.user&&storageKey==='appbass-practice-'+learningStore.user.id)learningStore.setPreference('practice',value).then(()=>$('#practice-status').textContent='Preferencias guardadas en tu cuenta.').catch(e=>$('#practice-status').textContent='No se guardó en la nube: '+e.message);}
+  learningStore.subscribe(async()=>{if(!learningStore.user||storageKey!=='appbass-practice-'+learningStore.user.id||!learningStore.ready)return;const pref=learningStore.preference('practice');if(!pref)return;preferencesReady=false;instrument=pref.instrument||instrument;$('#practice-instrument').value=instrument;$('#practice-difficulty').value=pref.difficulty||'roots';$('#practice-view').value=pref.view||'falling';await load(pref.id||item?.id);if(pref.tempo){engine.tempo=pref.tempo;$('#practice-tempo').value=pref.tempo;}preferencesReady=true;});
   function choices(){
     const level=$('#practice-level').value;
     $('#exercise-select').innerHTML=Object.entries({...GROUPS,'walking-studies':'Walking y acompañamiento · estudios PDF'}).map(([k,label])=>`<optgroup label="${label}">${catalog.filter(c=>c.group===k&&(!level||c.level===level)).map(c=>`<option value="${c.id}">${esc(c.title)} · ${labels[c.level]} · ${c.minutes} min</option>`).join('')}</optgroup>`).join('');
@@ -121,6 +124,16 @@ export function mountPractice(host,{onLesson,onJournal}) {
     const positions=[...upcoming,...(active?[active]:[])].map(pos).filter(Boolean);
     const maxFret=Math.max(12,...positions.map(p=>p.fret)),base=Math.max(0,maxFret-12);
     const color=n=>{const bar=score.bars.find(b=>n.beat>=b.beat&&n.beat<b.beat+b.length);if(bar?.root==null)return '#bd8cff';const interval=(n.midi-bar.root+120)%12;return interval===0?'#48e3ed':[3,4].includes(interval)?'#ff6cba':[6,7].includes(interval)?'#88ff99':[10,11].includes(interval)?'#ffc571':'#bd8cff';};
+    const view=$('#practice-view').value,cinematic=supportsCinematic(instrument)&&view!=='falling';
+    $('.fret-area').hidden=cinematic;$('#practice-cinematic').hidden=!cinematic;$('#practice-falling-toggle').hidden=cinematic;
+    if(cinematic){
+      const activePlanned=active?positionMap.get(active):null;
+      updateRealNeck($('#practice-cinematic'),activePlanned,color,noteNames);
+      $('#cinematic-fretboard').innerHTML=fretboardSVG(planned,beat,activePlanned,color,noteNames);
+      $('#cinematic-tab').innerHTML=tablatureSVG(score,planned,beat,activePlanned,color);
+      $('#cinematic-score-wrap').hidden=view!=='neck-tab-score';
+      if(view==='neck-tab-score')$('#cinematic-score').innerHTML=compactScoreSVG(score,beat,active,color);
+    }
     let svg='<defs><filter id="practice-glow" x="-70%" y="-70%" width="240%" height="240%"><feGaussianBlur stdDeviation="3"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><rect x="80" y="165" width="880" height="105" rx="6" fill="#0b1420"/>';
     for(let f=0;f<=12;f++){const x=90+f*71;svg+=`<line x1="${x}" y1="165" x2="${x}" y2="270" stroke="#42536a" ${instrument==='doubleBass'?'stroke-dasharray="3 4"':''}/><text x="${x}" y="291" fill="#a8bad0" text-anchor="middle" font-size="12">${base+f}</text>`;}
     const spacing=instrument==='electricBass5'?22:28;
@@ -140,7 +153,7 @@ export function mountPractice(host,{onLesson,onJournal}) {
   host.querySelectorAll('[data-walking-study]').forEach(button=>button.onclick=async()=>{$('#practice-level').value='';choices();await load(button.dataset.walkingStudy);$('#practice-play').focus();});
   $('#practice-level').onchange=()=>{choices();load($('#exercise-select').value);};
   $('#practice-difficulty').onchange=()=>load(item.id);
-  $('#practice-instrument').onchange=e=>{instrument=e.target.value;setBassSound(bassSoundForInstrument(instrument));engine.sound=bassSoundForInstrument(instrument);$('#practice-sound-status').textContent=instrument==='doubleBass'?'Sonido real · contrabajo pizzicato':'Sonido real · bajo con dedos';if(item?.generated==='strings')void load(item.id);else{plan();draw(engine.position());}save();};
+  $('#practice-instrument').onchange=e=>{instrument=e.target.value;setBassSound(bassSoundForInstrument(instrument));engine.sound=bassSoundForInstrument(instrument);$('#practice-sound-status').textContent=instrument==='doubleBass'?'Sonido real · contrabajo pizzicato':'Sonido real · bajo con dedos';if(!supportsCinematic(instrument)&&$('#practice-view').value!=='falling'){$('#practice-view').value='falling';$('#practice-status').textContent='La vista guiada usa el bajo eléctrico de 4 cuerdas; mantuvimos la vista de luces descendentes.';}if(item?.generated==='strings')void load(item.id);else{plan();draw(engine.position());}save();};
   $('#practice-tempo').onchange=e=>{const v=Number(e.target.value);if(!Number.isFinite(v))return;e.target.value=Math.max(30,Math.min(200,v));engine.configure({tempo:Number(e.target.value)});save();};
   $('#practice-volume').oninput=e=>engine.configure({volume:Number(e.target.value)/100});
   $('#practice-guide').onchange=e=>engine.configure({guide:e.target.checked});
@@ -157,6 +170,10 @@ export function mountPractice(host,{onLesson,onJournal}) {
   });
   $('#practice-click').onchange=e=>engine.configure({metronome:e.target.checked});
   $('#practice-visual').onchange=()=>draw(engine.position());
+  $('#practice-view').onchange=e=>{if(!supportsCinematic(instrument)&&e.target.value!=='falling'){e.target.value='falling';$('#practice-status').textContent='La vista guiada está disponible para bajo eléctrico de 4 cuerdas.';}draw(engine.position());save();};
+  host.querySelectorAll('[data-cinematic-exercise]').forEach(button=>button.onclick=async()=>{$('#practice-level').value='';choices();await load(button.dataset.cinematicExercise);});
+  host.querySelector('[data-tempo-stage="slow"]').onclick=()=>{const bpm=Math.max(30,Math.round((score?.tempo||72)*.7));$('#practice-tempo').value=String(bpm);$('#practice-tempo').dispatchEvent(new Event('change'));};
+  host.querySelector('[data-tempo-stage="target"]').onclick=()=>{$('#practice-tempo').value=String(score?.tempo||72);$('#practice-tempo').dispatchEvent(new Event('change'));};
   $('#practice-loop').onchange=e=>engine.loop=e.target.checked;
   $('#practice-increment').onchange=e=>engine.increment=Number(e.target.value);
   function range(){
@@ -183,6 +200,7 @@ export function mountPractice(host,{onLesson,onJournal}) {
       const selected=pref?.instrument||user?.instrument;instrument=['electricBass','electricBass5','doubleBass'].includes(selected)?selected:'electricBass';$('#practice-instrument').value=instrument;setBassSound(bassSoundForInstrument(instrument));engine.sound=bassSoundForInstrument(instrument);$('#practice-sound-status').textContent=instrument==='doubleBass'?'Sonido real · contrabajo pizzicato':'Sonido real · bajo con dedos';
       $('#practice-level').value='';choices();
       $('#practice-difficulty').value=pref?.difficulty||'roots';
+      $('#practice-view').value=['falling','neck-tab','neck-tab-score'].includes(pref?.view)?pref.view:'falling';
       await load(pref?.id||(user?.level==='advanced'?'turnaround':user?.level==='intermediate'?'ii-v-i':'open-strings'));
       if(pref?.tempo>=30&&pref.tempo<=200){engine.tempo=pref.tempo;$('#practice-tempo').value=pref.tempo;save();}
       preferencesReady=true;

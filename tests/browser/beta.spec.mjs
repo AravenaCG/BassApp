@@ -204,7 +204,7 @@ test('guest help is accessible on mobile, FAQ expands and manual tour can be ski
 });
 test('practice selection changes notes, difficulty, sound clock and loops',async({page})=>{
  const errors=[];page.on('pageerror',e=>errors.push(e.message));await mocks(page);
- await page.goto('/appbass.html');
+ await page.goto('/appbass.html#practicar');
  await expect(page.locator('#practice-play')).toBeEnabled();
  await page.locator('#exercise-select').selectOption('blues');
  await expect(page.locator('#exercise-title')).toContainText('Blues');
@@ -235,6 +235,25 @@ test('practice selection changes notes, difficulty, sound clock and loops',async
  await page.reload();
  await expect(page.locator('#exercise-title')).toHaveText('Paseo al atardecer');
  await expect(page.locator('#practice-difficulty')).toHaveValue('walking');
+});
+test('four-string guided view synchronizes realistic neck, enlarged fretboard, tab and score',async({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));await mocks(page);
+ await page.goto('/appbass.html#practicar');
+ await page.locator('#exercise-select').selectOption('major-scale');
+ await page.locator('#practice-view').selectOption('neck-tab-score');
+ await expect(page.locator('#practice-cinematic')).toBeVisible();
+ await expect(page.locator('.fret-area')).toBeHidden();
+ expect(await page.locator('.real-neck-wrap img').evaluate(img=>[img.naturalWidth,img.naturalHeight])).toEqual([420,1260]);
+ expect(await page.locator('#cinematic-fretboard circle').count()).toBeGreaterThan(0);
+ await expect(page.locator('#cinematic-fingering')).toContainText('traste 3');
+ await expect(page.locator('#cinematic-score-wrap')).toBeVisible();
+ await page.locator('[data-tempo-stage="slow"]').click();await expect(page.locator('#practice-tempo')).toHaveValue('42');
+ await page.locator('[data-cinematic-exercise="first-groove"]').click();await expect(page.locator('#exercise-select')).toHaveValue('first-groove');
+ await page.screenshot({path:'outputs/practice-cinematic-desktop.png',fullPage:true});
+ await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ await page.locator('#practice-instrument').selectOption('electricBass5');
+ await expect(page.locator('#practice-view')).toHaveValue('falling');await expect(page.locator('#practice-cinematic')).toBeHidden();
+ expect(errors).toEqual([]);
 });
 test('mobile registration fields do not overlap and pending reminders can be snoozed',async({page})=>{
  await page.setViewportSize({width:390,height:844});await mocks(page);

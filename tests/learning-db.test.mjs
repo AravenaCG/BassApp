@@ -14,6 +14,7 @@ test('wrong database is refused before connect; connected mismatch closes withou
 });
 test('learning requests reject foreign owners, invalid IDs, preference keys and noninteger versions',()=>{
  assert.deepEqual(validateLearning({kind:'preference',section:'practice',version:0,value:{instrument:'electricBass5'}}).value,{instrument:'electricBass5'});
+ assert.equal(validateLearning({kind:'preference',section:'practice',version:0,value:{view:'neck-tab-score'}}).value.view,'neck-tab-score');
  assert.deepEqual(validateLearning({kind:'preference',section:'reading',version:0,value:{level:5,solved:12,firstTry:9,bestStreak:4,barsSolved:2}}).value,{level:5,solved:12,firstTry:9,bestStreak:4,barsSolved:2});
  assert.throws(()=>validateLearning({kind:'preference',section:'reading',version:0,value:{level:7,solved:0}}));
  for(const b of [{kind:'unit',unitId:'H99',reviewed:true,version:0},{kind:'unit',unitId:'H01',reviewed:true,version:-1},{kind:'review',lessonId:'B99',tempo:60,rating:'hard',eventId:'x'},{kind:'preference',section:'__proto__',version:0,value:{}},{kind:'preference',section:'avatar',version:0,value:{admin:true}},{kind:'preference',section:'session',version:0,value:{minutes:15},userId:'other'}])assert.throws(()=>validateLearning(b));
