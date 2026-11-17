@@ -5,7 +5,7 @@ import {planFingering,routeHTML,stringNames} from './fingering.mjs';
 import {learningStore} from './learning-store.mjs';
 import {bassSoundForInstrument,setBassSound} from './bass-sounds.mjs';
 import {walkingScore,studyNotation,studyAdviceHTML,walkingCatalog} from './walking-studies.mjs';
-import {cinematicShell,supportsCinematic,fretboardSVG,tablatureSVG,compactScoreSVG,updateRealNeck} from './practice-cinematic.mjs?v=3';
+import {cinematicShell,supportsCinematic,fretboardSVG,tablatureSVG,compactScoreSVG,updateRealNeck} from './practice-cinematic.mjs?v=4';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const labels={basic:'Básico',intermediate:'Intermedio',advanced:'Avanzado'};
 const noteNames=['Do','Do♯','Re','Mi♭','Mi','Fa','Fa♯','Sol','La♭','La','Si♭','Si'];

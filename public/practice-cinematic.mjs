@@ -28,6 +28,11 @@ export function cinematicShell(){
 
 const stringColors=['#b78cff','#ff6cba','#75ef9a','#ffc571'];
 const stringLabels=['G','D','A','E'];
+// Coordinates measured against the transparent 420×1260 neck asset. The
+// fingering engine indexes strings as G, D, A, E; fret values sit halfway
+// between the actual metal fret wires instead of using uniform percentages.
+const realStringX=[65.16,54.89,44.87,35.08];
+const realFretY=[.95,6.83,17.36,26.53,35.19,43.25,50.79,57.94,64.73,71.05,76.97,82.49,87.65,92.53,97.14];
 const xForString=string=>95+(3-string)*110;
 const yForTabString=string=>58+string*34;
 const noteWindow=(planned,beat,before=2,after=6)=>planned.filter(note=>note.beat>=beat-before&&note.beat<=beat+after);
@@ -72,7 +77,13 @@ export function compactScoreSVG(score,beat,active,colorFor){
 export function updateRealNeck(root,active,colorFor,noteNames){
  const lights=root.querySelector('#real-neck-lights'),label=root.querySelector('#cinematic-fingering');
  if(!active){lights.innerHTML='';label.textContent='Silencio · prepará la próxima posición';return;}
- const x=10+(3-active.string)*26.65,y=3+Math.max(.5,active.fret-.5)/12*94,c=colorFor(active);
+ const {x,y}=realNeckPoint(active),c=colorFor(active);
  lights.innerHTML=`<i class="neck-string-light" style="--neck-x:${x}%;--note-color:${c}"></i><i class="neck-note-light" style="--neck-x:${x}%;--neck-y:${y}%;--note-color:${c}"></i>`;
  label.textContent=`${noteNames[active.midi%12]} · cuerda ${stringLabels[active.string]} · traste ${active.fret} · dedo ${active.finger||'libre'}`;
+}
+
+export function realNeckPoint(position){
+ const string=Math.max(0,Math.min(3,Number(position?.string)||0));
+ const fret=Math.max(0,Math.round(Number(position?.fret)||0));
+ return {x:realStringX[string],y:realFretY[Math.min(fret,realFretY.length-1)]};
 }
