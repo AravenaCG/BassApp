@@ -1,4 +1,4 @@
-import {mountPractice} from './practice-ui.mjs?v=2';
+import {mountPractice} from './practice-ui.mjs?v=4';
 import {catalog} from './practice-engine.mjs';
 import {mountAccount,api} from './account-ui.mjs?v=5';
 import {mountHelp} from './help-ui.mjs';
